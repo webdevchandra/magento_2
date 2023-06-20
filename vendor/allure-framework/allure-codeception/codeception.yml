@@ -1,0 +1,17 @@
+namespace: Qameta\Allure\Codeception\Test
+
+settings:
+  lint: true
+paths:
+  tests: test/codeception
+  output: build
+  support: test/codeception/_support
+  data: test/codeception/_data
+extensions:
+  enabled:
+    - Qameta\Allure\Codeception\AllureCodeception
+  config:
+    Qameta\Allure\Codeception\AllureCodeception:
+      outputDirectory: allure-results
+      linkTemplates:
+        issue: https://example.org/issues/%s
