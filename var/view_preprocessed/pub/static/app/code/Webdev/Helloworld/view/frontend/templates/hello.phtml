@@ -1,0 +1,1 @@
+<?php $objectManager = \Magento\Framework\App\ObjectManager::getInstance(); $data = $objectManager->create('\Webdev\Helloworld\Model\DataFactory')->create()->getCollection(); die(print_r($data->getData()));
