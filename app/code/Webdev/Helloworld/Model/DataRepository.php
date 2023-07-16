@@ -59,7 +59,7 @@ class DataRepository implements DataRepositoryInterface
     {
         $object = $this->objectFactory->create();
         $this->objectResourceModel->load($object, $id);
-        if (!$object->getId()) {
+        if (!$object->getStudentId()) {
             throw new NoSuchEntityException(__('Object with id "%1" does not exist.', $id));
         }
         return $object;

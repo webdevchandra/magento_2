@@ -30,15 +30,16 @@ namespace Webdev\Helloworld\Controller\Index;
 
         public function execute()
         {
-        $this->_dataModel->setStudentName("Test123");
-        $this->_dataModel->setStudentRollNo("12312313");
-        $this->_dataModel->setStudentStatus(1);
+            // Insert
+            // select/Read
+            // Update
+            // Delete
+            $data = $this->_dataRepository->getById(6);
+            
             try {
-                $this->_dataRepository->save($this->_dataModel);
-                die('--repository saved--');
+                $this->_dataRepository->save($data);
             } catch (CouldNotSaveException $e) {
                 echo $e->getMessage();
-                die('end');
             }
            
         }

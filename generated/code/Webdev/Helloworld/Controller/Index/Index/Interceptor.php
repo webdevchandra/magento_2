@@ -8,10 +8,10 @@ class Interceptor extends \Webdev\Helloworld\Controller\Index\Index implements \
 {
     use \Magento\Framework\Interception\Interceptor;
 
-    public function __construct(\Magento\Framework\App\Action\Context $context, \Magento\Framework\View\Result\PageFactory $pageFactory, \Webdev\Helloworld\Model\DataFactory $dataFactory)
+    public function __construct(\Magento\Framework\App\Action\Context $context, \Magento\Framework\View\Result\PageFactory $pageFactory, \Webdev\Helloworld\Api\DataRepositoryInterface $dataRepository, \Webdev\Helloworld\Api\Data\DataInterface $dataInterface)
     {
         $this->___init();
-        parent::__construct($context, $pageFactory, $dataFactory);
+        parent::__construct($context, $pageFactory, $dataRepository, $dataInterface);
     }
 
     /**
