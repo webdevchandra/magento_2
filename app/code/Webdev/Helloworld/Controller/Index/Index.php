@@ -30,17 +30,19 @@ namespace Webdev\Helloworld\Controller\Index;
 
         public function execute()
         {
-            // Insert
-            // select/Read
-            // Update
-            // Delete
-            $data = $this->_dataRepository->getById(6);
+            // insert
             
-            try {
-                $this->_dataRepository->save($data);
-            } catch (CouldNotSaveException $e) {
-                echo $e->getMessage();
-            }
-           
+            
+            
+            
+            // select/Read
+
+
+
+            // update
+            
+            
+            // delete
+            // $this->_dataRepository->deleteById(2);
         }
     }
