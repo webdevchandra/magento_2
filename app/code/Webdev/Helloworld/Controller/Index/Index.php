@@ -30,19 +30,41 @@ namespace Webdev\Helloworld\Controller\Index;
 
         public function execute()
         {
-            // insert
+            /** INSERT */
             
-            
-            
-            
-            // select/Read
+                // $this->_dataModel->setStudentName("test");
+                // $this->_dataModel->setStudentRollNo("111111");
+                // $this->_dataModel->setStudentStatus(1);
+                // try{
+                //     $this->_dataRepository->save($this->_dataModel);
+                //     echo 'Record Inserted';
+                // }catch(\Exception $e){
+                //     die($e->getMessage());
+                // }
+                // $this->_dataRepository->save($this->_dataModel);
 
 
+            /** SELECT / READ */
 
-            // update
-            
-            
-            // delete
-            // $this->_dataRepository->deleteById(2);
+                // $data = $this->_dataRepository->getById(1);
+                // echo '<pre>';print_r($data->getData());
+
+            /** UPDATE */
+
+                // $data = $this->_dataRepository->getById(1);
+                // $data->setStudentName('webdeev chandra');
+                // try{
+                //     $this->_dataRepository->save($data);
+                //     echo 'Record Updated';
+                // }catch(\Exception $e){
+                //     die($e->getMessage());
+                // }
+                // $this->_dataRepository->deleteById(1);
+
+            /** DELETE */
+
+                // $this->_dataRepository->deleteById(2);
+
+            die('end here');
         }
     }
