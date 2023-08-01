@@ -1,27 +1,11 @@
 <?php
 return [
-    'cache_types' => [
-        'compiled_config' => 1,
-        'config' => 1,
-        'layout' => 1,
-        'block_html' => 1,
-        'collections' => 1,
-        'reflection' => 1,
-        'db_ddl' => 1,
-        'eav' => 1,
-        'customer_notification' => 1,
-        'config_integration' => 1,
-        'config_integration_api' => 1,
-        'full_page' => 1,
-        'config_webservice' => 1,
-        'translate' => 1
-    ],
     'backend' => [
-        'frontName' => 'admin_75umaf'
+        'frontName' => 'admin_lg8qdp'
     ],
     'cache' => [
         'graphql' => [
-            'id_salt' => 'JBzLedHtndJDjoMckQq7uBDZeupOwp2V'
+            'id_salt' => 'c6LWLMoz65TKw47fMsb4mJmgRhVzizFm'
         ],
         'frontend' => [
             'default' => [
@@ -40,7 +24,7 @@ return [
         'consumers_wait_for_messages' => 1
     ],
     'crypt' => [
-        'key' => '543a200fe6f9edfd51b0d9e1f960e6f2'
+        'key' => '08e58995d47444df6b4e90d304e9dbc4'
     ],
     'db' => [
         'table_prefix' => '',
@@ -66,7 +50,7 @@ return [
         ]
     ],
     'x-frame-options' => 'SAMEORIGIN',
-    'MAGE_MODE' => 'default',
+    'MAGE_MODE' => 'developer',
     'session' => [
         'save' => 'files'
     ],
@@ -76,10 +60,26 @@ return [
     'directories' => [
         'document_root_is_pub' => true
     ],
+    'cache_types' => [
+        'config' => 1,
+        'layout' => 1,
+        'block_html' => 1,
+        'collections' => 1,
+        'reflection' => 1,
+        'db_ddl' => 1,
+        'compiled_config' => 1,
+        'eav' => 1,
+        'customer_notification' => 1,
+        'config_integration' => 1,
+        'config_integration_api' => 1,
+        'full_page' => 1,
+        'config_webservice' => 1,
+        'translate' => 1
+    ],
     'downloadable_domains' => [
-        'localhost'
+        'webdev-chandra.com'
     ],
     'install' => [
-        'date' => 'Tue, 23 May 2023 04:48:30 +0000'
+        'date' => 'Sun, 30 Jul 2023 11:13:04 +0000'
     ]
 ];
