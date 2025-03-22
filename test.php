@@ -1,3 +1,3 @@
 <?php
-echo 'First file asdasdasd';
+echo 'First file edited from custom branches';
 ?>
