@@ -17,44 +17,34 @@ pipeline {
     
     stages {
         
-        // --- Stage 1: Setup & Code Sync ---
         stage('Setup and Install') {
             steps {
-                echo 'Starting setup: installing dependencies and configuring environment...'
-                
-                // Assuming your requirements.txt is in the Git root (Jenkins WORKSPACE)
-                
-                // You can add logic here to copy the newly cloned code from 
-                // ${WORKSPACE} to ${MAGENTO_ROOT} if needed, but often
-                // Git is configured to push directly to the MAGENTO_ROOT.
+                echo 'Starting setup: installing dependencies...'
+                // These commands run in the Jenkins WORKSPACE (where the Git clone happened)
+                sh 'pip install -r requirements.txt' 
             }
         }
 
-        // --- Stage 2: Magento Deployment Tasks ---
+        // --- Stage 2: Magento Deployment Tasks (Code Sync Added) ---
         stage('Magento Deployment Tasks') {
             steps {
-                echo "Running build and deployment tasks inside: ${MAGENTO_ROOT}"
+                echo "Synchronizing code and running deployment tasks in: ${MAGENTO_ROOT}"
                 
                 // 🔑 CRITICAL: Use 'dir' to change the working directory to the Magento root.
                 dir("${MAGENTO_ROOT}") {
+                    
+                    // 1. ADDED STEP: Copy files from the Jenkins workspace into the Magento root.
+                    //    We use rsync for an efficient, reliable sync. The 'a' flag preserves permissions.
+                    //    The trailing slash on ${WORKSPACE}/ is important to copy CONTENTS, not the folder itself.
+                    sh "sudo rsync -av --exclude 'vendor' --exclude 'node_modules' ${WORKSPACE}/ ."
+                    echo 'Code synchronized from Jenkins Workspace to Magento root.'
+
+                    // 2. Run Magento commands on the newly synchronized code.
                     echo 'Cleaning caches and compiling static content...'
+                    sh 'sudo bin/magento cache:clean'
+                    sh 'sudo bin/magento setup:upgrade'
                     
-                    // ➡️ ADD YOUR MAGENTO COMMANDS HERE (use 'sudo' if the Jenkins user needs it)
-                    sh 'echo "Running: sudo bin/magento cache:clean"'
-                    sh 'echo "Running: sudo bin/magento setup:upgrade"'
-                    
-                    sh 'echo "Magento commands placeholder executed."'
-                }
-            }
-        }
-        
-        // --- Stage 3: Conditional Action (External Testing) ---
-        stage('Conditional Action') {
-            steps {
-                script {
-                     echo 'DEV/QA Environment detected. Executing conditional action...'
-                        // These would typically be running automated tests.
-                        sh 'echo "Dev/QA action executed "'
+                    sh 'echo "Magento commands executed."'
                 }
             }
         }
