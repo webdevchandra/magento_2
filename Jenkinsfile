@@ -21,7 +21,6 @@ pipeline {
             steps {
                 echo 'Starting setup: installing dependencies...'
                 // These commands run in the Jenkins WORKSPACE (where the Git clone happened)
-                sh 'pip install -r requirements.txt' 
             }
         }
 
