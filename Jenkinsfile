@@ -1,62 +1,91 @@
-// Jenkinsfile
+// Define common variables for the pipeline
+def PLACE_ORDER_LOCATOR = "css:button.action.primary.checkout[data-role='review-save']"
+def TEST_SUITE_PATH = "path/to/your/test_suite.robot" // UPDATE THIS PATH
 
 pipeline {
-    agent any // 1. Defines where the pipeline runs (on any available agent/node)
+    // Agent: Specifies where the pipeline will run (on any available Jenkins agent/node)
+    agent any
+    
+    // Environment: Define variables used across the pipeline (optional but good practice)
+    environment {
+        // Set the path for Robot Framework/Python executables if needed
+        PATH = "/usr/local/bin:$PATH" 
+    }
     
     stages {
-        // 2. Stage to perform project setup
-        stage('Setup') {
+        
+        // --- Stage 1: Setup & Clone ---
+        // NOTE: If your Jenkins job is configured with "Pipeline script from SCM," 
+        // the code checkout happens automatically BEFORE the first stage starts.
+        stage('Setup Dependencies') {
             steps {
-                echo 'Starting Pipeline setup...'
-                // Since you are on Ubuntu WSL, use 'sh' for shell commands
-                sh 'echo "Running setup steps like installing dependencies (e.g., npm install)"'
+                echo 'Installing required Python libraries and dependencies...'
+                
+                // Example: Install requirements for your Robot Framework project
+                sh 'pip install -r requirements.txt'
+                sh 'echo "Dependencies installed."'
+            }
+        }
+
+        // --- Stage 2: Testing ---
+        stage('Run Automated Tests') {
+            steps {
+                echo 'Starting Robot Framework test execution...'
+                
+                // Execute Robot Framework tests.
+                // The '|| true' allows the build to continue to the next stage 
+                // even if some tests fail, so Post-Actions can run.
+                sh "robot --outputdir Results ${TEST_SUITE_PATH} || true"
             }
         }
         
-        // 3. Stage to run tests
-        stage('Test') {
+        // --- Stage 3: Conditional Deployment/Order Placement ---
+        stage('Conditional Action (Place Order)') {
             steps {
-                echo 'Running tests...'
-                // Placeholder for running your Robot Framework tests or unit tests
-                sh 'robot your_tests/test_suite.robot || true' // '|| true' allows the build to continue if tests fail for now
-            }
-        }
-        
-        // 4. Stage to build an artifact (if applicable)
-        stage('Build') {
-            steps {
-                echo 'Building application or packaging artifacts...'
-                // Placeholder for a simple build command
-                sh 'mkdir -p build && echo "App built at $(date)" > build/app.log'
-            }
-        }
-        
-        // 5. Stage for deployment (if the build is successful)
-        stage('Deploy') {
-            when {
-                // Only run this stage if the previous stages succeeded
-                expression { return currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                echo 'Deploying to the environment...'
-                // Placeholder for deployment command
-                sh 'echo "Deployment to the server initiated..."'
+                script {
+                    // Check the current environment URL (e.g., if it contains stage. or qa.)
+                    def currentUrl = sh(returnStdout: true, script: 'echo $GIT_URL').trim().toLowerCase()
+                    def isDevEnv = currentUrl.contains("stage.") || currentUrl.contains("qa.")
+                    
+                    if (isDevEnv) {
+                        echo 'DEV/QA Environment detected. Proceeding with Place Order click...'
+                        
+                        // Execute the logic to click the button only on DEV/QA
+                        // NOTE: This logic assumes a successful test run has landed on the payment page.
+                        // For a proper pipeline, you'd need a separate script to re-open the page.
+                        
+                        // To click the element, you need a custom Groovy function 
+                        // or a shared library, as direct Selenium commands aren't native to Groovy.
+                        // Here, we'll log the intention for a simple pipeline:
+                        
+                        echo "Simulating click on Place Order button: ${PLACE_ORDER_LOCATOR}"
+                        // If you had a custom library, the call might look like:
+                        // selenium.clickElement(PLACE_ORDER_LOCATOR) 
+                        
+                    } else {
+                        echo 'PROD Environment detected. Skipping Place Order click.'
+                    }
+                }
             }
         }
     }
     
-    // 6. Post-build actions (run regardless of success/failure)
+    // --- Post-Build Actions ---
     post {
         always {
-            echo 'Pipeline finished.'
-            // Clean up workspace after build
-            // cleanWs() 
+            echo 'Archiving test results and cleaning up workspace...'
+            // Archive the logs and reports generated by Robot Framework
+            archiveArtifacts artifacts: 'Results/*', fingerprint: true
+            
+            // Clean up the Jenkins workspace after the build is complete
+            cleanWs()
         }
         success {
-            echo 'Build succeeded! Sending success notification.'
+            echo '✅ Pipeline completed successfully!'
+            // Add notification step here (e.g., email or Slack)
         }
         failure {
-            echo 'Build failed! Review the logs.'
+            echo '❌ Pipeline failed! Check the test reports in the archived artifacts.'
         }
     }
 }
