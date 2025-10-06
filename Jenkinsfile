@@ -1,59 +1,60 @@
-// Define common variables for the pipeline (You can fill these in later)
-def PLACE_ORDER_LOCATOR = "css:button.action.primary.checkout[data-role='review-save']"
+// Jenkinsfile
 
+// Define the absolute path to your Magento installation
+def MAGENTO_ROOT = '/var/www/html/magento2' 
 pipeline {
-    // Run the pipeline on any available agent that can execute shell commands (e.g., your Ubuntu server)
-    agent any
-    
-    // Environment: Define variables (optional, but good for defining tool paths)
+    // 1. AGENT: Specifies that the job can run on any available Jenkins agent
+    // that has access to your server's filesystem and shell commands (sh).
+    agent any 
+
+    // 2. ENVIRONMENT: Defines variables and paths for the build.
     environment {
-        // Example: Ensure global Python/shell paths are available
+        // Ensure standard system paths are available
         PATH = "/usr/local/bin:$PATH" 
+        // Define a variable for the Git URL that can be used later
+        GIT_URL = 'https://github.com/webdevchandra/magento_2.git' // UPDATE with your actual URL
     }
     
     stages {
         
-        // --- Stage 1: Setup & Dependencies ---
+        // --- Stage 1: Setup & Code Sync ---
         stage('Setup and Install') {
             steps {
                 echo 'Starting setup: installing dependencies and configuring environment...'
                 
-                // ➡️ ADD YOUR COMMANDS HERE (e.g., sh 'pip install -r requirements.txt')
-                sh 'echo "Dependency installation placeholder."' 
+                // Assuming your requirements.txt is in the Git root (Jenkins WORKSPACE)
+                
+                // You can add logic here to copy the newly cloned code from 
+                // ${WORKSPACE} to ${MAGENTO_ROOT} if needed, but often
+                // Git is configured to push directly to the MAGENTO_ROOT.
             }
         }
 
-        // --- Stage 2: Build/Compile ---
-        stage('Build/Package Artifacts') {
+        // --- Stage 2: Magento Deployment Tasks ---
+        stage('Magento Deployment Tasks') {
             steps {
-                echo 'Building or packaging the application/artifacts...'
+                echo "Running build and deployment tasks inside: ${MAGENTO_ROOT}"
                 
-                // ➡️ ADD YOUR BUILD/COMPILATION COMMANDS HERE (e.g., sh 'npm run build' or sh 'dotnet build')
-                sh 'echo "Build step placeholder."'
+                // 🔑 CRITICAL: Use 'dir' to change the working directory to the Magento root.
+                dir("${MAGENTO_ROOT}") {
+                    echo 'Cleaning caches and compiling static content...'
+                    
+                    // ➡️ ADD YOUR MAGENTO COMMANDS HERE (use 'sudo' if the Jenkins user needs it)
+                    sh 'echo "Running: sudo bin/magento cache:clean"'
+                    sh 'echo "Running: sudo bin/magento setup:upgrade"'
+                    
+                    sh 'echo "Magento commands placeholder executed."'
+                }
             }
         }
         
-        // --- Stage 3: Conditional Action (Place Order Check) ---
+        // --- Stage 3: Conditional Action (External Testing) ---
         stage('Conditional Action') {
             steps {
                 script {
-                    // Check the current environment URL based on the repository URL (as a proxy for the actual environment)
-                    // NOTE: In a real pipeline, you often use an Environment Variable or a parameter for this check.
-                    
-                    // Fetch the Git URL that Jenkins used for cloning
-                    def gitUrl = sh(returnStdout: true, script: 'echo $GIT_URL').trim().toLowerCase()
-                    def isDevEnv = gitUrl.contains("stage.") || gitUrl.contains("qa.")
-                    
-                    if (isDevEnv) {
-                        echo 'DEV/QA Environment detected. Executing conditional action (e.g., Place Order click)...'
-                        
-                        // ➡️ ADD YOUR DEV/QA-SPECIFIC COMMANDS HERE 
-                        sh 'echo "Dev/QA action executed successfully. (e.g., Clicking ${PLACE_ORDER_LOCATOR})"'
-                        
-                    } else {
-                        echo 'PROD Environment detected. Skipping conditional action.'
-                        // ➡️ ADD YOUR PROD-SPECIFIC LOGGING OR ACTIONS HERE
-                    }
+                     echo 'DEV/QA Environment detected. Executing conditional action...'
+                        // These would typically be running automated tests.
+                        sh 'echo "Dev/QA action executed "'
                 }
             }
         }
@@ -63,14 +64,14 @@ pipeline {
     post {
         always {
             echo 'Pipeline finished. Cleaning up workspace.'
-            // ➡️ ADD YOUR CLEANUP COMMANDS HERE (e.g., cleanWs() to delete files)
-            // cleanWs() 
+            // Clean up the temporary directory Jenkins uses for cloning the repo
+            cleanWs() 
         }
         success {
-            echo '✅ Build and pipeline succeeded.'
+            echo '✅ Deployment and pipeline succeeded.'
         }
         failure {
-            echo '❌ Pipeline failed.'
+            echo '❌ Pipeline failed! Review the logs for errors in dependency installation or Magento commands.'
         }
     }
 }
