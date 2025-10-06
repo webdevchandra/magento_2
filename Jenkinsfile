@@ -25,23 +25,20 @@ pipeline {
         }
 
         // --- Stage 2: Magento Deployment Tasks (Code Sync Added) ---
-        stage('Magento Deployment Tasks') {
+         stage('Magento Deployment Tasks') {
             steps {
                 echo "Synchronizing code and running deployment tasks in: ${MAGENTO_ROOT}"
                 
-                // 🔑 CRITICAL: Use 'dir' to change the working directory to the Magento root.
                 dir("${MAGENTO_ROOT}") {
                     
-                    // 1. ADDED STEP: Copy files from the Jenkins workspace into the Magento root.
-                    //    We use rsync for an efficient, reliable sync. The 'a' flag preserves permissions.
-                    //    The trailing slash on ${WORKSPACE}/ is important to copy CONTENTS, not the folder itself.
-                    sh "sudo rsync -av --exclude 'vendor' --exclude 'node_modules' ${WORKSPACE}/ ."
+                    // 1. UPDATED STEP: rsync command without 'sudo'
+                    sh "rsync -av --exclude 'vendor' --exclude 'node_modules' ${WORKSPACE}/ ."
                     echo 'Code synchronized from Jenkins Workspace to Magento root.'
 
-                    // 2. Run Magento commands on the newly synchronized code.
+                    // 2. Magento commands without 'sudo' (now allowed by sudoers file)
                     echo 'Cleaning caches and compiling static content...'
-                    sh 'sudo bin/magento cache:clean'
-                    sh 'sudo bin/magento setup:upgrade'
+                    sh 'bin/magento cache:clean'
+                    sh 'bin/magento setup:upgrade'
                     
                     sh 'echo "Magento commands executed."'
                 }
