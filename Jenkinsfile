@@ -35,7 +35,8 @@ pipeline {
                         'dev/',
                         'phpserver/',
                         '.idea/',
-                        '*.log'
+                        '*.log',
+                        'setup/'
                     ]
 
                     // Build --exclude parameters for rsync
