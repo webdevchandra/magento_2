@@ -3,11 +3,11 @@ pipeline {
 
     environment {
         ARTIFACT_DIR = 'build_artifact'
-        ZIP_NAME     = 'magento-clean.zip'
+        TAR_NAME     = 'magento-clean.tar.gz'
         REMOTE_USER  = 'ubuntu'
         REMOTE_IP    = '60.243.237.61'
         REMOTE_PATH  = '/var/www/html/magento2'
-        WEB_USER     = 'www-data'
+        WEB_USER     = 'www-data' // Change if your web server uses a different user
     }
 
     stages {
@@ -15,7 +15,7 @@ pipeline {
         stage('Clean Workspace') {
             steps {
                 echo "Cleaning old workspace..."
-                sh "rm -rf ${ARTIFACT_DIR} ${ZIP_NAME}"
+                sh "rm -rf ${ARTIFACT_DIR} ${TAR_NAME}"
             }
         }
 
@@ -38,6 +38,7 @@ pipeline {
                         '*.log'
                     ]
 
+                    // Build --exclude parameters for rsync
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
                     sh """
@@ -48,21 +49,21 @@ pipeline {
             }
         }
 
-        stage('Archive Zip') {
+        stage('Archive Tarball') {
             steps {
-                echo "Zipping the cleaned Magento 2 files..."
-                sh "cd ${ARTIFACT_DIR} && zip -r ../${ZIP_NAME} ."
-                archiveArtifacts artifacts: "${ZIP_NAME}", fingerprint: true
+                echo "Creating tar.gz archive of cleaned Magento files..."
+                sh "tar czf ${TAR_NAME} -C ${ARTIFACT_DIR} ."
+                archiveArtifacts artifacts: "${TAR_NAME}", fingerprint: true
             }
         }
 
         stage('Upload to Remote Server') {
             steps {
                 script {
-                    echo "Uploading zip to remote server..."
+                    echo "Uploading tarball to remote server..."
 
                     timeout(time: 2, unit: 'MINUTES') {
-                        sh "scp ${ZIP_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
+                        sh "scp ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
                     }
                 }
             }
@@ -79,9 +80,9 @@ pipeline {
                             ssh ${REMOTE_USER}@${REMOTE_IP} '
                                 set -e
                                 cd ${REMOTE_PATH} &&
-                                echo "Unzipping artifact..." &&
-                                unzip -o ${ZIP_NAME} &&
-                                rm ${ZIP_NAME} &&
+                                echo "Extracting artifact..." &&
+                                tar xzf ${TAR_NAME} &&
+                                rm ${TAR_NAME} &&
 
                                 echo "Fixing permissions..." &&
                                 sudo chown -R ${WEB_USER}:${WEB_USER} ${REMOTE_PATH} &&
