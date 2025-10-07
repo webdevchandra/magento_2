@@ -1,63 +1,103 @@
-// Jenkinsfile
-
-// Define the absolute path to your Magento installation
-def MAGENTO_ROOT = '/var/www/html/magento2' 
 pipeline {
-    // 1. AGENT: Specifies that the job can run on any available Jenkins agent
-    // that has access to your server's filesystem and shell commands (sh).
-    agent any 
+    agent any
 
-    // 2. ENVIRONMENT: Defines variables and paths for the build.
     environment {
-        // Ensure standard system paths are available
-        PATH = "/usr/local/bin:$PATH" 
-        // Define a variable for the Git URL that can be used later
-        GIT_URL = 'https://github.com/webdevchandra/magento_2.git' // UPDATE with your actual URL
+        ARTIFACT_DIR = 'build_artifact'
+        ZIP_NAME     = 'magento-clean.zip'
+        REMOTE_USER  = 'ubuntu'
+        REMOTE_IP    = '61.242.231.6'
+        REMOTE_PATH  = '/var/www/html/magento2'
+        WEB_USER     = 'www-data' // Change if your web server uses a different user
     }
-    
+
     stages {
-        
-        stage('Setup and Install') {
+
+        stage('Clean Workspace') {
             steps {
-                echo 'Starting setup: installing dependencies...'
-                // These commands run in the Jenkins WORKSPACE (where the Git clone happened)
+                echo "🧹 Cleaning old workspace..."
+                sh "rm -rf ${ARTIFACT_DIR} ${ZIP_NAME}"
             }
         }
 
-        // --- Stage 2: Magento Deployment Tasks (Code Sync Added) ---
-         stage('Magento Deployment Tasks') {
+        stage('Build Clean Magento Artifact') {
             steps {
-                echo "Synchronizing code and running deployment tasks in: ${MAGENTO_ROOT}"
-                
-                dir("${MAGENTO_ROOT}") {
-                    
-                    // 1. UPDATED STEP: rsync command without 'sudo'
-                    sh "rsync -av --exclude 'vendor' --exclude 'node_modules' ${WORKSPACE}/ ."
-                    echo 'Code synchronized from Jenkins Workspace to Magento root.'
+                echo "📦 Building clean Magento 2 artifact..."
 
-                    // 2. Magento commands without 'sudo' (now allowed by sudoers file)
-                    echo 'Cleaning caches and compiling static content...'
-                    sh 'bin/magento cache:clean'
-                    sh 'bin/magento setup:upgrade'
-                    
-                    sh 'echo "Magento commands executed."'
+                script {
+                    def excludes = [
+                        '.git/',
+                        'var/',
+                        'vendor/',
+                        'generated/',
+                        'pub/static/',
+                        'pub/media/',
+                        'node_modules/',
+                        'dev/',
+                        'phpserver/',
+                        '.idea/',
+                        '*.log'
+                    ]
+
+                    def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
+
+                    sh """
+                        mkdir -p ${ARTIFACT_DIR}
+                        rsync -av ${excludeParams} ./ ${ARTIFACT_DIR}/
+                    """
                 }
             }
         }
-    }
-    
-    // --- Post-Build Actions ---
-    post {
-        always {
-            echo 'Pipeline finished. Cleaning up workspace.'
-            // Clean up the temporary directory Jenkins uses for cloning the repo
-            cleanWs() 
+
+        stage('Archive Zip') {
+            steps {
+                echo "🗜️ Zipping the cleaned Magento 2 files..."
+                sh "cd ${ARTIFACT_DIR} && zip -r ../${ZIP_NAME} ."
+                archiveArtifacts artifacts: "${ZIP_NAME}", fingerprint: true
+            }
         }
-        success {
-            echo '✅ Deployment and pipeline succeeded.'
+
+        stage('Upload to Remote Server') {
+            steps {
+                script {
+                    echo "🚀 Uploading zip to remote server..."
+
+                    timeout(time: 2, unit: 'MINUTES') {
+                        sh "scp ${ZIP_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
+                    }
+                }
+            }
         }
-        failure {
-            echo '❌ Pipeline failed! Review the logs for errors in dependency installation or Magento commands.'
-        }
-    }
-}
+
+        stage('Deploy on Server') {
+            steps {
+                script {
+                    echo "🔧 Running deployment on server..."
+
+                    try {
+                        timeout(time: 15, unit: 'MINUTES') {
+                            sh """
+                            ssh ${REMOTE_USER}@${REMOTE_IP} '
+                                set -e
+                                cd ${REMOTE_PATH} &&
+                                echo "📦 Unzipping artifact..." &&
+                                unzip -o ${ZIP_NAME} &&
+                                rm ${ZIP_NAME} &&
+                                
+                                echo "🔐 Fixing permissions..." &&
+                                sudo chown -R ${WEB_USER}:${WEB_USER} ${REMOTE_PATH} &&
+
+                                echo "🎼 Running Composer..." &&
+                                sudo -u ${WEB_USER} composer install --no-dev --no-interaction &&
+
+                                echo "⚙️  Magento setup upgrade..." &&
+                                sudo -u ${WEB_USER} php bin/magento setup:upgrade &&
+
+                                echo "🧠 Compiling DI..." &&
+                                sudo -u ${WEB_USER} php bin/magento setup:di:compile &&
+
+                                echo "🎨 Deploying static content..." &&
+                                sudo -u ${WEB_USER} php bin/magento setup:static-content:deploy -f &&
+
+                                echo "🧹 Flushing cache..." &&
+                                sudo -u ${WEB_USER} php bin/magento cache:flush
+                            '
