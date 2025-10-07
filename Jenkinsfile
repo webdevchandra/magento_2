@@ -5,23 +5,23 @@ pipeline {
         ARTIFACT_DIR = 'build_artifact'
         ZIP_NAME     = 'magento-clean.zip'
         REMOTE_USER  = 'ubuntu'
-        REMOTE_IP    = '61.242.231.6'
+        REMOTE_IP    = '60.243.237.61'
         REMOTE_PATH  = '/var/www/html/magento2'
-        WEB_USER     = 'www-data' // Change if your web server uses a different user
+        WEB_USER     = 'www-data'
     }
 
     stages {
 
         stage('Clean Workspace') {
             steps {
-                echo "🧹 Cleaning old workspace..."
+                echo "Cleaning old workspace..."
                 sh "rm -rf ${ARTIFACT_DIR} ${ZIP_NAME}"
             }
         }
 
         stage('Build Clean Magento Artifact') {
             steps {
-                echo "📦 Building clean Magento 2 artifact..."
+                echo "Building clean Magento 2 artifact..."
 
                 script {
                     def excludes = [
@@ -50,7 +50,7 @@ pipeline {
 
         stage('Archive Zip') {
             steps {
-                echo "🗜️ Zipping the cleaned Magento 2 files..."
+                echo "Zipping the cleaned Magento 2 files..."
                 sh "cd ${ARTIFACT_DIR} && zip -r ../${ZIP_NAME} ."
                 archiveArtifacts artifacts: "${ZIP_NAME}", fingerprint: true
             }
@@ -59,7 +59,7 @@ pipeline {
         stage('Upload to Remote Server') {
             steps {
                 script {
-                    echo "🚀 Uploading zip to remote server..."
+                    echo "Uploading zip to remote server..."
 
                     timeout(time: 2, unit: 'MINUTES') {
                         sh "scp ${ZIP_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
@@ -71,7 +71,7 @@ pipeline {
         stage('Deploy on Server') {
             steps {
                 script {
-                    echo "🔧 Running deployment on server..."
+                    echo "Running deployment on server..."
 
                     try {
                         timeout(time: 15, unit: 'MINUTES') {
@@ -79,25 +79,47 @@ pipeline {
                             ssh ${REMOTE_USER}@${REMOTE_IP} '
                                 set -e
                                 cd ${REMOTE_PATH} &&
-                                echo "📦 Unzipping artifact..." &&
+                                echo "Unzipping artifact..." &&
                                 unzip -o ${ZIP_NAME} &&
                                 rm ${ZIP_NAME} &&
-                                
-                                echo "🔐 Fixing permissions..." &&
+
+                                echo "Fixing permissions..." &&
                                 sudo chown -R ${WEB_USER}:${WEB_USER} ${REMOTE_PATH} &&
 
-                                echo "🎼 Running Composer..." &&
+                                echo "Running Composer..." &&
                                 sudo -u ${WEB_USER} composer install --no-dev --no-interaction &&
 
-                                echo "⚙️  Magento setup upgrade..." &&
+                                echo "Magento setup upgrade..." &&
                                 sudo -u ${WEB_USER} php bin/magento setup:upgrade &&
 
-                                echo "🧠 Compiling DI..." &&
+                                echo "Compiling DI..." &&
                                 sudo -u ${WEB_USER} php bin/magento setup:di:compile &&
 
-                                echo "🎨 Deploying static content..." &&
+                                echo "Deploying static content..." &&
                                 sudo -u ${WEB_USER} php bin/magento setup:static-content:deploy -f &&
 
-                                echo "🧹 Flushing cache..." &&
+                                echo "Flushing cache..." &&
                                 sudo -u ${WEB_USER} php bin/magento cache:flush
                             '
+                            """
+                        }
+                    } catch (err) {
+                        error "Deployment failed: ${err}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Magento 2 deployed successfully to ${REMOTE_IP}:${REMOTE_PATH}"
+        }
+        failure {
+            echo "Deployment failed. Check logs for errors."
+        }
+        always {
+            echo "Pipeline finished at: ${new Date()}"
+        }
+    }
+}
