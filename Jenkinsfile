@@ -6,12 +6,15 @@ pipeline {
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
         REMOTE_USER  = 'cm'
-        REMOTE_IP    = '172.18.147.53'
+        REMOTE_IP    = '172.18.147.53' // The IP you are targeting
         REMOTE_PATH  = '/var/www/html/magento2'
-        WEB_USER     = 'cm' 
+        WEB_USER     = 'cm'  
         
         // 🚨 CRITICAL SECURITY RISK: Password hardcoded here and exposed in logs
         SSH_PASSWORD = 'test@123' 
+        
+        // --- Custom SSH Timeout ---
+        SSH_CONN_TIMEOUT = '1000000' // Time in seconds for the connection to wait
     }
 
     stages {
@@ -52,22 +55,30 @@ pipeline {
         stage('Upload and Deploy') {
             steps {
                 script {
-                    echo "Starting insecure upload and deployment..."
+                    echo "Starting upload and deployment to ${REMOTE_IP}..."
                     
                     // Check for required external tool before running
                     sh 'command -v sshpass || { echo "ERROR: sshpass utility not found. Install it on the Jenkins agent."; exit 1; }'
 
                     try {
+                        // Global stage timeout (90 minutes) is fine for long deployment tasks
                         timeout(time: 90, unit: 'MINUTES') {
                             sh """
-                           # 1. Upload the tarball using scp
-                            echo "Uploading tarball to ${env.REMOTE_IP}..."
-                            sshpass -p "${SSH_PASSWORD}" scp -o StrictHostKeyChecking=no -P 22 ${TAR_NAME} \
-                                ${env.REMOTE_USER}@${env.REMOTE_IP}:${REMOTE_PATH}/
+                            # 1. Upload the tarball using scp
+                            echo "Uploading tarball..."
+                            sshpass -p "${SSH_PASSWORD}" scp \
+                                -o StrictHostKeyChecking=no \
+                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \
+                                -P 22 ${TAR_NAME} \
+                                ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/
                             
                             # 2. Run deployment commands via SSH
                             echo "Running remote deployment commands..."
-                            sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no -P 22 ${env.REMOTE_USER}@${env.REMOTE_IP} '
+                            sshpass -p "${SSH_PASSWORD}" ssh \
+                                -o StrictHostKeyChecking=no \
+                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \
+                                -P 22 ${REMOTE_USER}@${REMOTE_IP} '
+                                
                                 set -e
                                 cd ${REMOTE_PATH} &&
                                 
@@ -96,7 +107,8 @@ pipeline {
                             """
                         }
                     } catch (err) {
-                        error "Deployment failed: ${err}"
+                        // The error message is now more helpful
+                        error "Deployment failed: Check network connection, firewall rules, or that the server at ${REMOTE_IP} is running: ${err}"
                     }
                 }
             }
