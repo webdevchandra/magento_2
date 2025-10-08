@@ -1,16 +1,14 @@
+
 pipeline {
     agent any
 
     environment {
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
-        REMOTE_USER  = 'ubuntu'
+        REMOTE_USER  = 'cm'
         REMOTE_IP    = '172.18.147.53'
         REMOTE_PATH  = '/var/www/html/magento2'
-        WEB_USER     = 'www-data' // Web server user on the remote host (Ubuntu/Debian default)
-        
-        // ID of the SSH credential configured in Jenkins
-        SSH_CREDENTIAL_ID = 'wsl-cm-ssh-key' 
+        WEB_USER     = 'www-data' // Change if your web server uses a different user
     }
 
     stages {
@@ -25,12 +23,24 @@ pipeline {
         stage('Build Clean Magento Artifact') {
             steps {
                 echo "Building clean Magento 2 artifact..."
+
                 script {
                     def excludes = [
-                        '.git/', 'var/', 'vendor/', 'generated/', 'pub/static/', 
-                        'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
-                        '.idea/', '*.log', 'setup/'
+                        '.git/',
+                        'var/',
+                        'vendor/',
+                        'generated/',
+                        'pub/static/',
+                        'pub/media/',
+                        'node_modules/',
+                        'dev/',
+                        'phpserver/',
+                        '.idea/',
+                        '*.log',
+                        'setup/'
                     ]
+
+                    // Build --exclude parameters for rsync
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
                     sh """
@@ -51,12 +61,11 @@ pipeline {
 
         stage('Upload to Remote Server') {
             steps {
-                echo "Uploading tarball to remote server securely..."
-                // Use sshagent to load the key for the SSH/SCP process
-                sshagent([env.SSH_CREDENTIAL_ID]) {
+                script {
+                    echo "Uploading tarball to remote server..."
+
                     timeout(time: 20, unit: 'MINUTES') {
-                        // -o StrictHostKeyChecking=no bypasses the "Host key verification failed" error on first run
-                        sh "scp -o StrictHostKeyChecking=no ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
+                        sh "scp ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
                     }
                 }
             }
@@ -64,45 +73,41 @@ pipeline {
 
         stage('Deploy on Server') {
             steps {
-                echo "Running deployment on server..."
-                // Use sshagent again for the SSH command
-                sshagent([env.SSH_CREDENTIAL_ID]) {
-                    // Use a script block to allow Groovy error handling (try/catch)
-                    script {
-                        try {
-                            timeout(time: 45, unit: 'MINUTES') {
-                                sh """
-                                // -o StrictHostKeyChecking=no bypasses the host key verification
-                                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_IP} '
-                                    set -e
-                                    cd ${REMOTE_PATH} &&
-                                    echo "Extracting artifact..." &&
-                                    tar xzf ${TAR_NAME} &&
-                                    rm ${TAR_NAME} &&
+                script {
+                    echo "Running deployment on server..."
 
-                                    echo "Fixing permissions..." &&
-                                    sudo chown -R ${WEB_USER}:${WEB_USER} ${REMOTE_PATH} &&
+                    try {
+                        timeout(time: 45, unit: 'MINUTES') {
+                            sh """
+                            ssh ${REMOTE_USER}@${REMOTE_IP} '
+                                set -e
+                                cd ${REMOTE_PATH} &&
+                                echo "Extracting artifact..." &&
+                                tar xzf ${TAR_NAME} &&
+                                rm ${TAR_NAME} &&
 
-                                    echo "Running Composer..." &&
-                                    sudo -u ${WEB_USER} composer install --no-dev --no-interaction &&
+                                echo "Fixing permissions..." &&
+                                sudo chown -R ${WEB_USER}:${WEB_USER} ${REMOTE_PATH} &&
 
-                                    echo "Magento setup upgrade..." &&
-                                    sudo -u ${WEB_USER} php bin/magento setup:upgrade &&
+                                echo "Running Composer..." &&
+                                sudo -u ${WEB_USER} composer install --no-dev --no-interaction &&
 
-                                    echo "Compiling DI..." &&
-                                    sudo -u ${WEB_USER} php bin/magento setup:di:compile &&
+                                echo "Magento setup upgrade..." &&
+                                sudo -u ${WEB_USER} php bin/magento setup:upgrade &&
 
-                                    echo "Deploying static content..." &&
-                                    sudo -u ${WEB_USER} php bin/magento setup:static-content:deploy -f &&
+                                echo "Compiling DI..." &&
+                                sudo -u ${WEB_USER} php bin/magento setup:di:compile &&
 
-                                    echo "Flushing cache..." &&
-                                    sudo -u ${WEB_USER} php bin/magento cache:flush
-                                '
-                                """
-                            }
-                        } catch (err) {
-                            error "Deployment failed: ${err}"
+                                echo "Deploying static content..." &&
+                                sudo -u ${WEB_USER} php bin/magento setup:static-content:deploy -f &&
+
+                                echo "Flushing cache..." &&
+                                sudo -u ${WEB_USER} php bin/magento cache:flush
+                            '
+                            """
                         }
+                    } catch (err) {
+                        error "Deployment failed: ${err}"
                     }
                 }
             }
@@ -111,10 +116,10 @@ pipeline {
 
     post {
         success {
-            echo "Deployment to ${REMOTE_IP}:${REMOTE_PATH} successful! 🎉"
+            echo "Magento 2 deployed successfully to ${REMOTE_IP}:${REMOTE_PATH}"
         }
         failure {
-            echo "Deployment failed. Check logs for errors. 😔"
+            echo "Deployment failed. Check logs for errors."
         }
         always {
             echo "Pipeline finished at: ${new Date()}"
