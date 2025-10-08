@@ -63,7 +63,7 @@ pipeline {
                 script {
                     echo "Uploading tarball to remote server..."
 
-                    timeout(time: 2, unit: 'MINUTES') {
+                    timeout(time: 20, unit: 'MINUTES') {
                         sh "scp ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
                     }
                 }
@@ -76,7 +76,7 @@ pipeline {
                     echo "Running deployment on server..."
 
                     try {
-                        timeout(time: 15, unit: 'MINUTES') {
+                        timeout(time: 45, unit: 'MINUTES') {
                             sh """
                             ssh ${REMOTE_USER}@${REMOTE_IP} '
                                 set -e
