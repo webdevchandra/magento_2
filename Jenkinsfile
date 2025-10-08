@@ -1,5 +1,3 @@
-Succesfule jenkins script for magento2:
-
 pipeline {
     agent any
 
@@ -82,11 +80,10 @@ pipeline {
                                 tar xzf ${TAR_NAME}
                                 echo "Removing tarball..."
                                 rm ${TAR_NAME}
-								echo "Running magento cli commands"
-								echo "Running composer"
-								composer install --ignore-platform-reqs
-								echo "Running upgrade"
-								php bin/magento setup:upgrade
+
+                                # Run composer install to fetch dependencies (ADDED)
+                                echo "Running composer install to fetch dependencies..."
+                                composer install --no-dev --optimize-autoloader
                             """
                             echo "Executing remote extraction commands..."
                             // Use sshCommand to run the script remotely
@@ -96,6 +93,51 @@ pipeline {
                         // The error message will now be cleaner if the connection fails
                         error "Deployment failed: Check network connection, plugin installation, or credentials: ${err}"
                     }
+                }
+            }
+        }
+
+        // Re-adding the Magento deployment commands needed for a complete pipeline
+        stage('Magento Deployment Commands') {
+            steps {
+                script {
+                    def remote = [
+                        name: 'magento_server',
+                        host: REMOTE_IP,
+                        user: REMOTE_USER,
+                        password: SSH_PASSWORD,
+                        allowAnyHosts: true
+                    ]
+
+                    // The full set of Magento 2 CLI commands for deployment
+                    def magentoCommands = """
+                        set -e
+                        cd ${REMOTE_PATH}
+
+                        # 1. Enable Maintenance Mode to prevent users accessing the site during update
+                        echo "Enabling Magento maintenance mode..."
+                        php bin/magento maintenance:enable
+
+                        # Composer install is skipped here as it ran in the previous stage.
+
+                        # 2. Clear cache, run database migrations, and compile code
+                        echo "Running setup:upgrade and compiling code..."
+                        php bin/magento setup:upgrade --keep-generated
+                        php bin/magento setup:di:compile
+
+                        # 3. Deploy static content (Change 'en_US' to your required locale(s))
+                        echo "Deploying static content..."
+                        php bin/magento setup:static-content:deploy en_US -f
+
+                        # 4. Clear cache and Disable Maintenance Mode
+                        echo "Flushing cache and disabling maintenance mode..."
+                        php bin/magento cache:flush
+                        php bin/magento maintenance:disable
+                    """
+                    
+                    echo "Executing remote Magento CLI commands..."
+                    // Run all commands in a single ssh session for efficiency
+                    sshCommand remote: remote, command: magentoCommands, failOnError: true
                 }
             }
         }
