@@ -4,8 +4,8 @@ pipeline {
     environment {
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
-        REMOTE_USER  = 'ubuntu'
-        REMOTE_IP    = '172.18.147.53'
+        REMOTE_USER  = 'cm'
+        REMOTE_IP    = 'LAPTOP-8FV29R58'
         REMOTE_PATH  = '/var/www/html/magento2'
         WEB_USER     = 'www-data' // Change if your web server uses a different user
     }
@@ -64,7 +64,7 @@ pipeline {
                     echo "Uploading tarball to remote server..."
 
                     timeout(time: 20, unit: 'MINUTES') {
-                        sh "scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
+                        sh "scp ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
                     }
                 }
             }
