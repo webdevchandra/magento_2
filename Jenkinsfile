@@ -60,14 +60,14 @@ pipeline {
                     try {
                         timeout(time: 45, unit: 'MINUTES') {
                             sh """
-                            # 1. Upload the tarball using scp
-                            echo "Uploading tarball to ${REMOTE_IP}..."
+                           # 1. Upload the tarball using scp
+                            echo "Uploading tarball to ${env.REMOTE_IP}..."
                             sshpass -p "${SSH_PASSWORD}" scp -o StrictHostKeyChecking=no -P 22 ${TAR_NAME} \
-                                ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/
+                                ${env.REMOTE_USER}@${env.REMOTE_IP}:${REMOTE_PATH}/
                             
                             # 2. Run deployment commands via SSH
                             echo "Running remote deployment commands..."
-                            sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no -P 22 ${REMOTE_USER}@${REMOTE_IP} '
+                            sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no -P 22 ${env.REMOTE_USER}@${env.REMOTE_IP} '
                                 set -e
                                 cd ${REMOTE_PATH} &&
                                 
