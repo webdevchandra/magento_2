@@ -64,7 +64,7 @@ pipeline {
                     echo "Uploading tarball to remote server..."
 
                     timeout(time: 20, unit: 'MINUTES') {
-                        sh "scp ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
+                        sh "scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
                     }
                 }
             }
