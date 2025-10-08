@@ -6,15 +6,14 @@ pipeline {
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
         REMOTE_USER  = 'cm'
-        REMOTE_IP    = '172.18.147.53' // The IP you are targeting
+        REMOTE_IP    = '172.18.147.53' // Your target IP
         REMOTE_PATH  = '/var/www/html/magento2'
-        WEB_USER     = 'cm'  
+        
+        // --- Custom SSH Timeout (10 seconds) ---
+        SSH_CONN_TIMEOUT = '10' 
         
         // 🚨 CRITICAL SECURITY RISK: Password hardcoded here and exposed in logs
         SSH_PASSWORD = 'test@123' 
-        
-        // --- Custom SSH Timeout ---
-        SSH_CONN_TIMEOUT = '1000000' // Time in seconds for the connection to wait
     }
 
     stages {
@@ -27,7 +26,7 @@ pipeline {
 
         stage('Build Artifact') {
             steps {
-                echo "Building clean Magento 2 artifact..."
+                echo "Building clean artifact..."
                 script {
                     def excludes = [
                         '.git/', 'var/', 'vendor/', 'generated/', 'pub/static/', 
@@ -46,37 +45,39 @@ pipeline {
 
         stage('Archive Tarball') {
             steps {
-                echo "Creating tar.gz archive of cleaned Magento files..."
+                echo "Creating tar.gz archive..."
                 sh "tar czf ${TAR_NAME} -C ${ARTIFACT_DIR} ."
                 archiveArtifacts artifacts: "${TAR_NAME}", fingerprint: true
             }
         }
 
-        stage('Upload and Deploy') {
+        // ---------------------------------------------------------------------
+        // Simplified Deployment Stage
+        // ---------------------------------------------------------------------
+        stage('Upload and Extract') {
             steps {
                 script {
-                    echo "Starting upload and deployment to ${REMOTE_IP}..."
+                    echo "Starting upload and extraction on ${env.REMOTE_IP}..."
                     
                     // Check for required external tool before running
                     sh 'command -v sshpass || { echo "ERROR: sshpass utility not found. Install it on the Jenkins agent."; exit 1; }'
 
                     try {
-                        // Global stage timeout (90 minutes) is fine for long deployment tasks
-                        timeout(time: 90, unit: 'MINUTES') {
+                        timeout(time: 5, unit: 'MINUTES') {
                             sh """
                             # 1. Upload the tarball using scp
-                            echo "Uploading tarball..."
-                            sshpass -p "${SSH_PASSWORD}" scp \
-                                -o StrictHostKeyChecking=no \
-                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \
-                                -P 22 ${TAR_NAME} \
+                            echo "--- Executing SCP Command ---"
+                            sshpass -p "${SSH_PASSWORD}" scp \\
+                                -o StrictHostKeyChecking=no \\
+                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \\
+                                -P 22 ${TAR_NAME} \\
                                 ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/
                             
-                            # 2. Run deployment commands via SSH
-                            echo "Running remote deployment commands..."
-                            sshpass -p "${SSH_PASSWORD}" ssh \
-                                -o StrictHostKeyChecking=no \
-                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \
+                            # 2. Run remote extraction commands via SSH
+                            echo "--- Executing SSH Command for Extraction ---"
+                            sshpass -p "${SSH_PASSWORD}" ssh \\
+                                -o StrictHostKeyChecking=no \\
+                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \\
                                 -P 22 ${REMOTE_USER}@${REMOTE_IP} '
                                 
                                 set -e
@@ -84,31 +85,14 @@ pipeline {
                                 
                                 echo "Extracting artifact..." &&
                                 tar xzf ${TAR_NAME} &&
-                                rm ${TAR_NAME} &&
-
-                                echo "Fixing permissions..." &&
-                                sudo chown -R ${WEB_USER}:${WEB_USER} . &&
                                 
-                                echo "Running Composer..." &&
-                                sudo -u ${WEB_USER} composer install --no-dev --no-interaction &&
-
-                                echo "Magento setup upgrade..." &&
-                                sudo -u ${WEB_USER} php bin/magento setup:upgrade &&
-
-                                echo "Compiling DI..." &&
-                                sudo -u ${WEB_USER} php bin/magento setup:di:compile &&
-
-                                echo "Deploying static content..." &&
-                                sudo -u ${WEB_USER} php bin/magento setup:static-content:deploy -f &&
-
-                                echo "Flushing cache..." &&
-                                sudo -u ${WEB_USER} php bin/magento cache:flush
+                                echo "Removing tarball..." &&
+                                rm ${TAR_NAME}
                             '
                             """
                         }
                     } catch (err) {
-                        // The error message is now more helpful
-                        error "Deployment failed: Check network connection, firewall rules, or that the server at ${REMOTE_IP} is running: ${err}"
+                        error "Deployment failed. Check network connection and firewall: ${err}"
                     }
                 }
             }
@@ -117,7 +101,7 @@ pipeline {
 
     post {
         success {
-            echo "Magento 2 deployed successfully to ${REMOTE_IP}:${REMOTE_PATH}"
+            echo "Artifact uploaded and extracted successfully on ${REMOTE_IP}:${REMOTE_PATH}"
         }
         failure {
             echo "Deployment failed. Check logs for errors."
