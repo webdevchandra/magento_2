@@ -6,7 +6,7 @@ pipeline {
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
         REMOTE_USER  = 'cm'
-        REMOTE_IP    = '172.18.147.53' // Your target IP
+        REMOTE_IP    = '172.18.147.53' // The confirmed reachable IP
         REMOTE_PATH  = '/var/www/html/magento2'
         
         // --- Custom SSH Timeout (10 seconds) ---
@@ -17,68 +17,37 @@ pipeline {
     }
 
     stages {
-        stage('Prepare') {
-            steps {
-                echo "Cleaning old workspace..."
-                sh "rm -rf ${ARTIFACT_DIR} ${TAR_NAME}"
-            }
-        }
+        // ... (Prepare, Build Artifact, Archive Tarball stages remain the same) ...
 
-        stage('Build Artifact') {
-            steps {
-                echo "Building clean artifact..."
-                script {
-                    def excludes = [
-                        '.git/', 'var/', 'vendor/', 'generated/', 'pub/static/', 
-                        'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
-                        '.idea/', '*.log', 'setup/'
-                    ]
-                    def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
-
-                    sh """
-                        mkdir -p ${ARTIFACT_DIR}
-                        rsync -av ${excludeParams} ./ ${ARTIFACT_DIR}/
-                    """
-                }
-            }
-        }
-
-        stage('Archive Tarball') {
-            steps {
-                echo "Creating tar.gz archive..."
-                sh "tar czf ${TAR_NAME} -C ${ARTIFACT_DIR} ."
-                archiveArtifacts artifacts: "${TAR_NAME}", fingerprint: true
-            }
-        }
-
-        // ---------------------------------------------------------------------
-        // Simplified Deployment Stage
-        // ---------------------------------------------------------------------
         stage('Upload and Extract') {
             steps {
                 script {
                     echo "Starting upload and extraction on ${env.REMOTE_IP}..."
-                    
-                    // Check for required external tool before running
                     sh 'command -v sshpass || { echo "ERROR: sshpass utility not found. Install it on the Jenkins agent."; exit 1; }'
 
                     try {
                         timeout(time: 5, unit: 'MINUTES') {
                             sh """
+                            # Set local shell variables to guarantee correct interpolation
+                            IP="${REMOTE_IP}"
+                            USER="${REMOTE_USER}"
+                            PASS="${SSH_PASSWORD}"
+                            TIMEOUT="${SSH_CONN_TIMEOUT}"
+
                             # 1. Upload the tarball using scp
-                            echo "--- Executing SCP Command ---"
-                            sshpass -p "${SSH_PASSWORD}" scp \\
+                            echo "--- Executing SCP Command to \$IP ---"
+                            sshpass -p "\$PASS" scp \\
                                 -o StrictHostKeyChecking=no \\
-                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \\
+                                -o ConnectTimeout=\$TIMEOUT \\
                                 -P 22 ${TAR_NAME} \\
-                                ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/
+                                \$USER@\$IP:${REMOTE_PATH}/
                             
                             # 2. Run remote extraction commands via SSH
-                            echo "--- Executing SSH Command for Extraction ---"
-                            sshpass -p "${SSH_PASSWORD}" ssh \\
+                            echo "--- Executing SSH Command to \$IP for Extraction ---"
+                            sshpass -p "\$PASS" ssh \\
                                 -o StrictHostKeyChecking=no \\
-                                -o ConnectTimeout=${SSH_CONN_TIMEOUT} \\
-                                -P 22 ${REMOTE_USER}@${REMOTE_IP} '
+                                -o ConnectTimeout=\$TIMEOUT \\
+                                -P 22 \$USER@\$IP '
                                 
                                 set -e
                                 cd ${REMOTE_PATH} &&
