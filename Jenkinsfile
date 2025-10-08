@@ -7,7 +7,9 @@ pipeline {
         REMOTE_USER  = 'ubuntu'
         REMOTE_IP    = '172.18.147.53'
         REMOTE_PATH  = '/var/www/html/magento2'
-        WEB_USER     = 'www-data' // Change if your web server uses a different user
+        WEB_USER     = 'www-data' 
+        // ➡️ 1. Define the SSH Credential ID
+        SSH_CREDENTIAL_ID = 'wsl-cm-ssh-key' 
     }
 
     stages {
@@ -22,24 +24,12 @@ pipeline {
         stage('Build Clean Magento Artifact') {
             steps {
                 echo "Building clean Magento 2 artifact..."
-
                 script {
                     def excludes = [
-                        '.git/',
-                        'var/',
-                        'vendor/',
-                        'generated/',
-                        'pub/static/',
-                        'pub/media/',
-                        'node_modules/',
-                        'dev/',
-                        'phpserver/',
-                        '.idea/',
-                        '*.log',
-                        'setup/'
+                        '.git/', 'var/', 'vendor/', 'generated/', 'pub/static/', 
+                        'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
+                        '.idea/', '*.log', 'setup/'
                     ]
-
-                    // Build --exclude parameters for rsync
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
                     sh """
@@ -60,11 +50,12 @@ pipeline {
 
         stage('Upload to Remote Server') {
             steps {
-                script {
-                    echo "Uploading tarball to remote server..."
-
+                echo "Uploading tarball to remote server securely..."
+                // ➡️ 2. Use sshagent to load the private key
+                sshagent([env.SSH_CREDENTIAL_ID]) {
                     timeout(time: 20, unit: 'MINUTES') {
-                        sh "scp ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
+                        // ➡️ 3. Use StrictHostKeyChecking=no to bypass verification
+                        sh "scp -o StrictHostKeyChecking=no ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/"
                     }
                 }
             }
@@ -72,13 +63,14 @@ pipeline {
 
         stage('Deploy on Server') {
             steps {
-                script {
-                    echo "Running deployment on server..."
-
+                echo "Running deployment on server..."
+                // ➡️ 2. Use sshagent again for the remote command
+                sshagent([env.SSH_CREDENTIAL_ID]) {
                     try {
                         timeout(time: 45, unit: 'MINUTES') {
                             sh """
-                            ssh ${REMOTE_USER}@${REMOTE_IP} '
+                            // ➡️ 3. Use StrictHostKeyChecking=no for the SSH command
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_IP} '
                                 set -e
                                 cd ${REMOTE_PATH} &&
                                 echo "Extracting artifact..." &&
@@ -86,6 +78,7 @@ pipeline {
                                 rm ${TAR_NAME} &&
 
                                 echo "Fixing permissions..." &&
+                                // Ensure the 'ubuntu' user has passwordless sudo for this command!
                                 sudo chown -R ${WEB_USER}:${WEB_USER} ${REMOTE_PATH} &&
 
                                 echo "Running Composer..." &&
