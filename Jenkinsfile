@@ -66,7 +66,7 @@ pipeline {
                     ]
                     
                     try {
-                        timeout(time: 5, unit: 'MINUTES') {
+                        timeout(time: 10, unit: 'MINUTES') { // INCREASED TIMEOUT to 10 minutes to accommodate composer install
                             
                             // 2. Upload the tarball using sshPut
                             echo "Uploading ${TAR_NAME} to ${REMOTE_PATH}..."
