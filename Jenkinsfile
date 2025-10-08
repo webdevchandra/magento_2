@@ -58,7 +58,7 @@ pipeline {
                     sh 'command -v sshpass || { echo "ERROR: sshpass utility not found. Install it on the Jenkins agent."; exit 1; }'
 
                     try {
-                        timeout(time: 45, unit: 'MINUTES') {
+                        timeout(time: 90, unit: 'MINUTES') {
                             sh """
                            # 1. Upload the tarball using scp
                             echo "Uploading tarball to ${env.REMOTE_IP}..."
