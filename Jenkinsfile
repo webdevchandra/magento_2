@@ -10,30 +10,27 @@ pipeline {
         REMOTE_PATH  = '/var/www/html/magento2'
         WEB_USER     = 'cm' 
         
-        // 🚨 CRITICAL SECURITY RISK: Password hardcoded in the script
+        // 🚨 CRITICAL SECURITY RISK: Password hardcoded here and exposed in logs
         SSH_PASSWORD = 'test@123' 
     }
 
     stages {
-
-        stage('Clean Workspace') {
+        stage('Prepare') {
             steps {
                 echo "Cleaning old workspace..."
                 sh "rm -rf ${ARTIFACT_DIR} ${TAR_NAME}"
             }
         }
 
-        stage('Build Clean Magento Artifact') {
+        stage('Build Artifact') {
             steps {
                 echo "Building clean Magento 2 artifact..."
-
                 script {
                     def excludes = [
                         '.git/', 'var/', 'vendor/', 'generated/', 'pub/static/', 
                         'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
                         '.idea/', '*.log', 'setup/'
                     ]
-                    
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
                     sh """
@@ -55,19 +52,21 @@ pipeline {
         stage('Upload and Deploy') {
             steps {
                 script {
-                    echo "Uploading and deploying on server..."
+                    echo "Starting insecure upload and deployment..."
                     
+                    // Check for required external tool before running
+                    sh 'command -v sshpass || { echo "ERROR: sshpass utility not found. Install it on the Jenkins agent."; exit 1; }'
+
                     try {
                         timeout(time: 45, unit: 'MINUTES') {
                             sh """
                             # 1. Upload the tarball using scp
-                            echo "Uploading tarball..."
-                            # 🚨 Password used directly with sshpass 
-                            sshpass -p "${SSH_PASSWORD}" scp -o StrictHostKeyChecking=no -P 22 ${TAR_NAME} ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/
+                            echo "Uploading tarball to ${REMOTE_IP}..."
+                            sshpass -p "${SSH_PASSWORD}" scp -o StrictHostKeyChecking=no -P 22 ${TAR_NAME} \
+                                ${REMOTE_USER}@${REMOTE_IP}:${REMOTE_PATH}/
                             
                             # 2. Run deployment commands via SSH
                             echo "Running remote deployment commands..."
-                            # 🚨 Password used directly with sshpass
                             sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no -P 22 ${REMOTE_USER}@${REMOTE_IP} '
                                 set -e
                                 cd ${REMOTE_PATH} &&
