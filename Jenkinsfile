@@ -108,11 +108,11 @@ stage('Magento Deployment Commands') {
             mkdir -p vendor var pub/static pub/media generated
 
             echo "Fixing ownership to jenkins..."
-            chown -R jenkins:jenkins .
+            echo "test@123" | sudo -S chown -R jenkins:jenkins .
 
             echo "Setting write permissions..."
-            chmod -R 775 var pub generated
-            chmod -R 777 var/cache var/page_cache
+            echo "test@123" | sudo -S chmod -R 775 var pub generated
+            echo "test@123" | sudo -S chmod -R 777 var/cache var/page_cache
 
             echo "Running composer install..."
             composer install --ignore-platform-reqs
