@@ -111,34 +111,40 @@ pipeline {
                     ]
 
                 def magentoCommands = """
-    set -e
-    cd ${REMOTE_PATH}
+set -e
+cd /var/www/html/magento2
 
-    echo "${SSH_PASSWORD}" | sudo -S chown -R cm:www-data .
+echo "Setting permissions..."
+sudo chown -R cm:www-data .
+sudo find . -type d -exec chmod 750 {} \;
+sudo find . -type f -exec chmod 640 {} \;
+sudo chmod -R 770 var pub/static pub/media generated
 
-    echo "${SSH_PASSWORD}" | sudo -S find . -type d -exec chmod 750 {} \\;
-    echo "${SSH_PASSWORD}" | sudo -S find . -type f -exec chmod 640 {} \\;
+echo "Cleaning old cache and generated files..."
+rm -rf var/cache/* var/page_cache/* var/view_preprocessed/*
+rm -rf generated/code/* generated/metadata/*
 
-    echo "${SSH_PASSWORD}" | sudo -S chmod -R 770 var pub/static pub/media generated
+echo "Running composer install..."
+composer install --no-dev --optimize-autoloader
 
-    echo "Clearing old generated code and cache..."
-    rm -rf generated/ var/cache/ var/page_cache/ var/di/
+echo "Compiling Magento code..."
+php bin/magento setup:di:compile
 
-    echo "Compiling Magento code..."
-    php bin/magento setup:di:compile
+echo "Enabling maintenance mode..."
+php bin/magento maintenance:enable
 
-    echo "Enabling Magento maintenance mode..."
-    php bin/magento maintenance:enable
+echo "Running setup:upgrade..."
+php bin/magento setup:upgrade --keep-generated
 
-    echo "Running setup:upgrade..."
-    php bin/magento setup:upgrade --keep-generated
+echo "Deploying static content..."
+php bin/magento setup:static-content:deploy en_US -f
 
-    echo "Deploying static content..."
-    php bin/magento setup:static-content:deploy en_US -f
+echo "Flushing cache..."
+php bin/magento cache:flush
 
-    echo "Flushing cache and disabling maintenance mode..."
-    php bin/magento cache:flush
-    php bin/magento maintenance:disable
+echo "Disabling maintenance mode..."
+php bin/magento maintenance:disable
+
 """
 
                     echo "Executing remote Magento CLI commands..."
