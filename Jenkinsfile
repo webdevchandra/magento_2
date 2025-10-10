@@ -104,12 +104,6 @@ stage('Magento Deployment Commands') {
             set -e
             cd /var/www/html/magento2
 
-            echo "Running composer install..."
-            composer install --ignore-platform-reqs
-
-            echo "Running composer dump-autoload..."
-            composer dump-autoload
-
             echo "Running Magento setup upgrade..."
             php bin/magento setup:upgrade
 
