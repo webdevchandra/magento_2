@@ -27,7 +27,7 @@ pipeline {
                 echo "Building clean artifact..."
                 script {
                     def excludes = [
-                        '.git/', 'var/', 'vendor/', 'generated/', 'pub/static/', 
+                        '.git/', 
                         'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
                         '.idea/', '*.log', 'setup/'
                     ]
