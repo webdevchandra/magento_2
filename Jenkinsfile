@@ -116,8 +116,8 @@ cd /var/www/html/magento2
 
 echo "Setting permissions..."
 sudo chown -R cm:www-data .
-sudo find . -type d -exec chmod 750 {} \;
-sudo find . -type f -exec chmod 640 {} \;
+sudo find . -type d -exec chmod 750 {} \\;
+sudo find . -type f -exec chmod 640 {} \\;
 sudo chmod -R 770 var pub/static pub/media generated
 
 echo "Cleaning old cache and generated files..."
