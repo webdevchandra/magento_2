@@ -5,7 +5,7 @@ pipeline {
         // --- Connection Details ---
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
-        REMOTE_USER  = 'cm'
+        REMOTE_USER  = 'root'
         REMOTE_IP    = '172.18.147.53' // Your target IP
         REMOTE_PATH  = '/var/www/html/magento2'
         
@@ -104,7 +104,7 @@ stage('Magento Deployment Commands') {
             set -e
             cd /var/www/html/magento2
             echo "Fixing ownership to jenkins..."
-
+            
             echo "Setting write permissions..."
             echo "test@123" | sudo -S chmod -R 775 var pub generated
             echo "test@123" | sudo -S chmod -R 777 var/cache var/page_cache
