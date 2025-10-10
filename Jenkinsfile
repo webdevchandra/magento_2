@@ -84,7 +84,7 @@ pipeline {
 
                                 # Run composer install to fetch dependencies (ADDED)
                                 echo "Running composer install to fetch dependencies..."
-                                composer install --ignore-paltform-reqs
+                                composer install --ignore-platform-reqs
                                 echo "Running dumpautolaod..."
                                 composer dump-autoload
                                 echo "Running sudo permissions ..."
