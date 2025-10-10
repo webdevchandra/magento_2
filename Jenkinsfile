@@ -87,13 +87,13 @@ pipeline {
                             
                             echo "Setting ownership of all extracted files to ${REMOTE_USER}..."
                             # Set ownership back to the deployment user to allow composer/magento commands to run without sudo.
-                            sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
+                            #sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
                             
                             echo "Removing tarball..."
                             rm ${TAR_NAME}
                             
                             echo "Running composer install..."
-                            composer install --no-dev --prefer-dist --optimize-autoloader
+                            #composer install --no-dev --prefer-dist --optimize-autoloader
                             """
 
                             echo "Executing remote extraction and setup commands..."
@@ -127,22 +127,22 @@ pipeline {
                     echo "Setting Magento file system permissions using sudo..."
                     # Since the previous stage's composer install or other environment factors may have created files 
                     # with restrictive permissions, we use 'sudo' here to guarantee the chmod operations succeed.
-                    sudo find var generated pub/static pub/media app/etc -type d -exec chmod u+w,g+w {} +
-                    sudo find var generated pub/static pub/media app/etc -type f -exec chmod u+w,g+w {} +
-                    sudo chmod u+x bin/magento
+                    #sudo find var generated pub/static pub/media app/etc -type d -exec chmod u+w,g+w {} +
+                    #sudo find var generated pub/static pub/media app/etc -type f -exec chmod u+w,g+w {} +
+                    #sudo chmod u+x bin/magento
                     
                     # Re-apply ownership using sudo to ensure the deployment user ('cm') owns any files 
                     # created since the previous stage and has full control before running Magento commands.
                     sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
 
                     echo "Running Magento setup upgrade..."
-                    php bin/magento setup:upgrade --keep-generated
+                    #php bin/magento setup:upgrade --keep-generated
 
                     echo "Compiling Magento (Dependency Injection)..."
-                    php bin/magento setup:di:compile
+                    #php bin/magento setup:di:compile
 
                     echo "Deploying static content..."
-                    php bin/magento setup:static-content:deploy en_US -f
+                    #php bin/magento setup:static-content:deploy en_US -f
 
                     echo "Flushing cache..."
                     php bin/magento cache:flush
