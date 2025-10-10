@@ -33,7 +33,7 @@ return [
                 'host' => 'localhost',
                 'dbname' => 'm24',
                 'username' => 'root',
-                'password' => '',
+                'password' => 'test@123',
                 'model' => 'mysql4',
                 'engine' => 'innodb',
                 'initStatements' => 'SET NAMES utf8;',
