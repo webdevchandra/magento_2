@@ -103,13 +103,14 @@ stage('Magento Deployment Commands') {
         sh '''#!/bin/bash
             set -e
             cd /var/www/html/magento2
-
-            echo "Creating missing directories..."
-            mkdir -p vendor var pub/static pub/media generated
-
             echo "Setting initial permissions before Composer install..."
             echo "test@123" | sudo -S chown -R root:root .
             echo "test@123" | sudo -S chmod -R 775 .
+            
+            echo "Creating missing directories..."
+            mkdir -p vendor var pub/static pub/media generated
+
+            
 
             echo "Running composer install to fetch dependencies..."
             composer install --ignore-platform-reqs
