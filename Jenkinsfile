@@ -99,47 +99,34 @@ pipeline {
         }
 
         // Re-adding the Magento deployment commands needed for a complete pipeline
-         stage('Magento Deployment Commands') {
+ stage('Magento Deployment Commands') {
     steps {
         sh '''#!/bin/bash
             set -e
-            echo "Starting Magento deployment tasks..."
-
             cd /var/www/html/magento2
 
-            echo "Setting permissions..."
-            sudo chown -R cm:www-data .
-            sudo find . -type d -exec chmod 750 {} \\;
-            sudo find . -type f -exec chmod 640 {} \\;
-            sudo chmod -R 770 var pub/static pub/media generated
+            # Hardcoded sudo password
+            SUDO_PASS='test@123'
 
-            echo "Cleaning old cache and generated files..."
+            echo "$SUDO_PASS" | sudo -S chown -R cm:www-data .
+            echo "$SUDO_PASS" | sudo -S find . -type d -exec chmod 750 {} \\;
+            echo "$SUDO_PASS" | sudo -S find . -type f -exec chmod 640 {} \\;
+            echo "$SUDO_PASS" | sudo -S chmod -R 770 var pub/static pub/media generated
+
             rm -rf var/cache/* var/page_cache/* var/view_preprocessed/*
             rm -rf generated/code/* generated/metadata/*
 
-            echo "Running composer install..."
             composer install --no-dev --optimize-autoloader
-
-            echo "Compiling Magento code..."
             php bin/magento setup:di:compile
-
-            echo "Enabling maintenance mode..."
             php bin/magento maintenance:enable
-
-            echo "Running setup:upgrade..."
             php bin/magento setup:upgrade --keep-generated
-
-            echo "Deploying static content..."
             php bin/magento setup:static-content:deploy en_US -f
-
-            echo "Flushing cache..."
             php bin/magento cache:flush
-
-            echo "Disabling maintenance mode..."
             php bin/magento maintenance:disable
         '''
     }
 }
+
 
     }
 
