@@ -110,38 +110,36 @@ pipeline {
                         allowAnyHosts: true
                     ]
 
-                    def magentoCommands = """
-                        set -e
-                        cd ${REMOTE_PATH}
-                    
-                        # Use sudo with password from stdin
-                        # Set user:group to cm:www-data
-                        sudo chown -R cm:www-data .
-                        # Set directory and file permissions
-                        find . -type d -exec chmod 750 {} \\;
-                        find . -type f -exec chmod 640 {} \\;
-                        # Set writable permissions for required directories
-                        chmod -R 770 var pub/static pub/media generated
-                        # 1. Compile code before enabling maintenance mode
-                        echo "Compiling Magento code..."
-                        php bin/magento setup:di:compile
-                    
-                        # 2. Enable Maintenance Mode
-                        echo "Enabling Magento maintenance mode..."
-                        php bin/magento maintenance:enable
-                    
-                        # 3. Run DB upgrade and deploy static content
-                        echo "Running setup:upgrade..."
-                        php bin/magento setup:upgrade --keep-generated
-                    
-                        echo "Deploying static content..."
-                        php bin/magento setup:static-content:deploy en_US -f
-                    
-                        # 4. Clear cache and disable maintenance mode
-                        echo "Flushing cache and disabling maintenance mode..."
-                        php bin/magento cache:flush
-                        php bin/magento maintenance:disable
-                    """
+                def magentoCommands = """
+    set -e
+    cd ${REMOTE_PATH}
+
+    echo "${SSH_PASSWORD}" | sudo -S chown -R cm:www-data .
+
+    echo "${SSH_PASSWORD}" | sudo -S find . -type d -exec chmod 750 {} \\;
+    echo "${SSH_PASSWORD}" | sudo -S find . -type f -exec chmod 640 {} \\;
+
+    echo "${SSH_PASSWORD}" | sudo -S chmod -R 770 var pub/static pub/media generated
+
+    echo "Clearing old generated code and cache..."
+    rm -rf generated/ var/cache/ var/page_cache/ var/di/
+
+    echo "Compiling Magento code..."
+    php bin/magento setup:di:compile
+
+    echo "Enabling Magento maintenance mode..."
+    php bin/magento maintenance:enable
+
+    echo "Running setup:upgrade..."
+    php bin/magento setup:upgrade --keep-generated
+
+    echo "Deploying static content..."
+    php bin/magento setup:static-content:deploy en_US -f
+
+    echo "Flushing cache and disabling maintenance mode..."
+    php bin/magento cache:flush
+    php bin/magento maintenance:disable
+"""
 
                     echo "Executing remote Magento CLI commands..."
                     // Run all commands in a single ssh session for efficiency
