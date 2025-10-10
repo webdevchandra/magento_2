@@ -137,7 +137,7 @@ pipeline {
 
                     echo "Running Magento setup upgrade..."
                     #php bin/magento setup:upgrade --keep-generated
-
+                    composer dump-autoload
                     echo "Compiling Magento (Dependency Injection)..."
                     php bin/magento setup:di:compile
 
