@@ -75,24 +75,27 @@ pipeline {
 
                             // 3. Execute the extraction command using sshCommand
                             def remoteCommand = """
-                                set -e
-                                cd ${REMOTE_PATH}
-                                echo "Extracting artifact..."
-                                tar xzf ${TAR_NAME}
-                                echo "Removing tarball..."
-                                rm ${TAR_NAME}
+                            set -e
+                            cd ${REMOTE_PATH}
+                        
+                            echo "Extracting artifact..."
+                            tar xzf ${TAR_NAME}
+                            echo "Removing tarball..."
+                            rm ${TAR_NAME}
+                        
+                            echo "Running composer install to fetch dependencies..."
+                            composer install --ignore-platform-reqs
+                            echo "Running dump-autoload..."
+                            composer dump-autoload
+                        
+                            echo "Running sudo permissions ..."
+                            echo "test@123" | sudo -S chown -R cm:cm .
+                        
+                            echo "Running chmod permissions..."
+                            echo "test@123" | sudo -S chmod -R 777 generated/ pub/ var/cache/ var/page_cache/
+                            echo "End permissions..."
+                        """
 
-                                # Run composer install to fetch dependencies (ADDED)
-                                echo "Running composer install to fetch dependencies..."
-                                composer install --ignore-platform-reqs
-                                echo "Running dumpautolaod..."
-                                composer dump-autoload
-                                echo "Running sudo permissions ..."
-                                echo "test@123" | sudo -S chown -R cm:cm .
-                                echo "Running chmod permissions..."
-                                chmod -R 777 generated/ pub/ var/cache/ var/page_cache/
-                                echo "end permissions..."
-                            """
                             echo "Executing remote extraction commands..."
                             // Use sshCommand to run the script remotely
                             sshCommand remote: remote, command: remoteCommand, failOnError: true
