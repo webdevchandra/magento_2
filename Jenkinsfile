@@ -29,7 +29,7 @@ pipeline {
                     def excludes = [
                         '.git/', 
                         'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
-                        '.idea/', '*.log', 'setup/', 'vendor/', 'lib/', 'app/'
+                        '.idea/', '*.log', 'setup/'
                     ]
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
@@ -124,12 +124,16 @@ pipeline {
                     set -e
                     cd ${REMOTE_PATH}
                     
-                    echo "Setting Magento file system permissions..."
-                    # Set permissions to ensure the deployment user ('cm') can write to critical directories
-                    # This is crucial for commands like setup:upgrade and setup:di:compile
-                    find var generated pub/static pub/media app/etc -type d -exec chmod u+w,g+w {} +
-                    find var generated pub/static pub/media app/etc -type f -exec chmod u+w,g+w {} +
-                    chmod u+x bin/magento
+                    echo "Setting Magento file system permissions using sudo..."
+                    # Since the previous stage's composer install or other environment factors may have created files 
+                    # with restrictive permissions, we use 'sudo' here to guarantee the chmod operations succeed.
+                    sudo find var generated pub/static pub/media app/etc -type d -exec chmod u+w,g+w {} +
+                    sudo find var generated pub/static pub/media app/etc -type f -exec chmod u+w,g+w {} +
+                    sudo chmod u+x bin/magento
+                    
+                    # Re-apply ownership using sudo to ensure the deployment user ('cm') owns any files 
+                    # created since the previous stage and has full control before running Magento commands.
+                    sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
 
                     echo "Running Magento setup upgrade..."
                     php bin/magento setup:upgrade --keep-generated
