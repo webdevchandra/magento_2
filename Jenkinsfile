@@ -29,7 +29,7 @@ pipeline {
                     def excludes = [
                         '.git/', 
                         'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
-                        '.idea/', '*.log', 'setup/'
+                        '.idea/', '*.log', 'setup/', './'
                     ]
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
