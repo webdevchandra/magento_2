@@ -29,7 +29,7 @@ pipeline {
                     def excludes = [
                         '.git/', 
                         'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
-                        '.idea/', '*.log', 'setup/'
+                        '.idea/', '*.log', 'setup/', vendor/, lib/,app/
                     ]
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
@@ -120,16 +120,21 @@ pipeline {
                         allowAnyHosts: true 
                     ]
 
-                    // Note: These commands often require running as the web server user (e.g., www-data) 
-                    // or with appropriate sudo permissions. We run them here as 'cm' because ownership was fixed above.
                     def magentoCommand = """
                     set -e
                     cd ${REMOTE_PATH}
                     
+                    echo "Setting Magento file system permissions..."
+                    # Set permissions to ensure the deployment user ('cm') can write to critical directories
+                    # This is crucial for commands like setup:upgrade and setup:di:compile
+                    find var generated pub/static pub/media app/etc -type d -exec chmod u+w,g+w {} +
+                    find var generated pub/static pub/media app/etc -type f -exec chmod u+w,g+w {} +
+                    chmod u+x bin/magento
+
                     echo "Running Magento setup upgrade..."
                     php bin/magento setup:upgrade --keep-generated
 
-                    echo "Compiling Magento..."
+                    echo "Compiling Magento (Dependency Injection)..."
                     php bin/magento setup:di:compile
 
                     echo "Deploying static content..."
