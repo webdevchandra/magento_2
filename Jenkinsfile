@@ -115,8 +115,7 @@ pipeline {
                         cd ${REMOTE_PATH}
                     
                         # Use sudo with password from stdin
-                        echo "\$SUDO_PASSWORD" | sudo -S chmod -R 777 generated/ app/etc/ pub/ var/
-                    
+                        echo 'test@123' | sudo -S chmod -R 777 /var/www/html/magento2/generated/ /var/www/html/magento2/pub/static/ /var/www/html/magento2/var/
                         # 1. Compile code before enabling maintenance mode
                         echo "Compiling Magento code..."
                         php bin/magento setup:di:compile
