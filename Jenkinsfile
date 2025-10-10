@@ -83,17 +83,6 @@ pipeline {
                             echo "Removing tarball..."
                             rm ${TAR_NAME}
                         
-                            echo "Running composer install to fetch dependencies..."
-                            composer install --ignore-platform-reqs
-                            echo "Running dump-autoload..."
-                            composer dump-autoload
-                        
-                            echo "Running sudo permissions ..."
-                            echo "test@123" | sudo -S chown -R cm:cm /var/www/html/magento2/
-                        
-                            echo "Running chmod permissions..."
-                            echo "test@123" | sudo -S chmod -R 777 /var/www/html/magento2/generated/ /var/www/html/magento2/pub/ /var/www/html/magento2/var/cache/ /var/www/html/magento2/var/page_cache/
-                            echo "End permissions..."
                         """
 
                             echo "Executing remote extraction commands..."
@@ -114,12 +103,26 @@ pipeline {
         sh '''#!/bin/bash
             set -e
             cd /var/www/html/magento2
+            echo "Running composer install to fetch dependencies..."
             composer install --ignore-platform-reqs
-            php bin/magento maintenance:enable
-            php bin/magento setup:upgrade
-            php bin/magento setup:di:compile
-            php bin/magento setup:static-content:deploy en_US -f
-            php bin/magento cache:flush
+            echo "Running dump-autoload..."
+            composer dump-autoload
+        
+            echo "Running sudo permissions ..."
+            echo "test@123" | sudo -S chown -R root:root /var/www/html/magento2/
+        
+            echo "Running chmod permissions..."
+            echo "test@123" | sudo -S chmod -R 777 /var/www/html/magento2/generated/ /var/www/html/magento2/pub/ /var/www/html/magento2/var/cache/ /var/www/html/magento2/var/page_cache/
+            echo "End permissions..."
+             echo "setup upgrade..."
+            echo "test@123" | sudo -S php bin/magento setup:upgrade
+            echo "setup compile..."
+            echo "test@123" | sudo -S php bin/magento setup:di:compile
+            echo "setup static content..."
+            echo "test@123" | sudo -S php bin/magento setup:static-content:deploy en_US -f
+            echo "cache flush..."
+            echo "test@123" | sudo -S php bin/magento cache:flush
+             echo "commands done ..."
         '''
     }
 }
