@@ -89,10 +89,10 @@ pipeline {
                             composer dump-autoload
                         
                             echo "Running sudo permissions ..."
-                            echo "test@123" | sudo -S chown -R cm:cm .
+                            echo "test@123" | sudo -S chown -R cm:cm /var/www/html/magento2/
                         
                             echo "Running chmod permissions..."
-                            echo "test@123" | sudo -S chmod -R 777 generated/ pub/ var/cache/ var/page_cache/
+                            echo "test@123" | sudo -S chmod -R 777 /var/www/html/magento2/generated/ /var/www/html/magento2/pub/ /var/www/html/magento2/var/cache/ /var/www/html/magento2/var/page_cache/
                             echo "End permissions..."
                         """
 
@@ -114,6 +114,7 @@ pipeline {
         sh '''#!/bin/bash
             set -e
             cd /var/www/html/magento2
+            composer install --ignore-platform-reqs
             php bin/magento maintenance:enable
             php bin/magento setup:upgrade
             php bin/magento setup:di:compile
