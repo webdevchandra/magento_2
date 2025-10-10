@@ -87,7 +87,7 @@ pipeline {
                             
                             echo "Setting ownership of all extracted files to ${REMOTE_USER}..."
                             # Set ownership back to the deployment user to allow composer/magento commands to run without sudo.
-                            #sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
+                            sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
                             
                             echo "Removing tarball..."
                             rm ${TAR_NAME}
