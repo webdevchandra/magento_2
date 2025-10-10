@@ -5,12 +5,13 @@ pipeline {
         // --- Connection Details ---
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
-        REMOTE_USER  = 'root' // Use root for all remote operations
-        REMOTE_IP    = '172.18.147.53'
+        REMOTE_USER  = 'cm'
+        REMOTE_IP    = '172.18.147.53' // Your target IP
         REMOTE_PATH  = '/var/www/html/magento2'
-
-        // ⚠️ WARNING: Insecure hardcoded credentials
-        SSH_PASSWORD = 'test@123'
+        
+        // 🚨 CRITICAL SECURITY RISK: Password hardcoded here
+        SSH_PASSWORD = 'test@123' 
+        SUDO_PASSWORD = 'test@123'
     }
 
     stages {
@@ -48,77 +49,93 @@ pipeline {
             }
         }
 
+        // ---------------------------------------------------------------------
+        // FIX: Using SSH Pipeline Steps
+        // ---------------------------------------------------------------------
         stage('Upload and Extract') {
             steps {
                 script {
                     echo "Starting secured upload and extraction on ${REMOTE_IP}..."
 
+                    // 1. Define the remote connection map
                     def remote = [
                         name: 'magento_server',
                         host: REMOTE_IP,
-                        user: REMOTE_USER,     // root
+                        user: REMOTE_USER,
                         password: SSH_PASSWORD,
-                        allowAnyHosts: true
+                        allowAnyHosts: true // Equivalent to -o StrictHostKeyChecking=no
                     ]
-
+                    
                     try {
-                        timeout(time: 10, unit: 'MINUTES') {
+                        timeout(time: 10, unit: 'MINUTES') { // INCREASED TIMEOUT to 10 minutes to accommodate composer install
+                            
+                            // 2. Upload the tarball using sshPut
                             echo "Uploading ${TAR_NAME} to ${REMOTE_PATH}..."
                             sshPut remote: remote, from: TAR_NAME, into: REMOTE_PATH, failOnError: true
 
+                            // 3. Execute the extraction command using sshCommand
                             def remoteCommand = """
-                                set -e
-                                cd ${REMOTE_PATH}
+                            set -e
+                            cd ${REMOTE_PATH}
+                        
+                            echo "Extracting artifact..."
+                            tar xzf ${TAR_NAME}
+                            echo "Removing tarball..."
+                            rm ${TAR_NAME}
+                        
+                            echo "Running composer install to fetch dependencies..."
+                            composer install --ignore-platform-reqs
+                            echo "Running dump-autoload..."
+                            composer dump-autoload
+                        
+                            echo "Running sudo permissions ..."
+                            echo "test@123" | sudo -S chown -R cm:cm /var/www/html/magento2/
+                        
+                            echo "Running chmod permissions..."
+                            echo "test@123" | sudo -S chmod -R 777 /var/www/html/magento2/generated/ /var/www/html/magento2/pub/ /var/www/html/magento2/var/cache/ /var/www/html/magento2/var/page_cache/
+                            echo "End permissions..."
+                        """
 
-                                echo "Extracting artifact..."
-                                tar xzf ${TAR_NAME}
-                                echo "Removing tarball..."
-                                rm ${TAR_NAME}
-
-                                echo "Installing dependencies via Composer..."
-                                composer install --ignore-platform-reqs
-                                composer dump-autoload
-
-                                echo "Setting file permissions..."
-                                chown -R cm:cm ${REMOTE_PATH}
-                                chmod -R 777 ${REMOTE_PATH}/generated/ ${REMOTE_PATH}/pub/ ${REMOTE_PATH}/var/cache/ ${REMOTE_PATH}/var/page_cache/
-                            """
-
-                            echo "Executing remote commands as root..."
+                            echo "Executing remote extraction commands..."
+                            // Use sshCommand to run the script remotely
                             sshCommand remote: remote, command: remoteCommand, failOnError: true
                         }
                     } catch (err) {
-                        error "Deployment failed: Check network connection, SSH access, or credentials: ${err}"
+                        // The error message will now be cleaner if the connection fails
+                        error "Deployment failed: Check network connection, plugin installation, or credentials: ${err}"
                     }
                 }
             }
         }
 
-        stage('Magento Deployment Commands') {
-            steps {
-                sh '''#!/bin/bash
-                    set -e
-                    cd /var/www/html/magento2
-                    composer install --ignore-platform-reqs
-                    php bin/magento maintenance:enable
-                    php bin/magento setup:upgrade
-                    php bin/magento setup:di:compile
-                    php bin/magento setup:static-content:deploy en_US -f
-                    php bin/magento cache:flush
-                '''
-            }
-        }
+        // Re-adding the Magento deployment commands needed for a complete pipeline
+ stage('Magento Deployment Commands') {
+    steps {
+        sh '''#!/bin/bash
+            set -e
+            cd /var/www/html/magento2
+            composer install --ignore-platform-reqs
+            php bin/magento maintenance:enable
+            php bin/magento setup:upgrade
+            php bin/magento setup:di:compile
+            php bin/magento setup:static-content:deploy en_US -f
+            php bin/magento cache:flush
+        '''
+    }
+}
+
+
     }
 
     post {
         success {
-            echo "✅ Artifact uploaded and extracted successfully on ${REMOTE_IP}:${REMOTE_PATH}"
+            echo "Artifact uploaded and extracted successfully on ${REMOTE_IP}:${REMOTE_PATH}"
         }
         failure {
-            echo "❌ Deployment failed. Check logs for errors."
+            echo "Deployment failed. Check logs for errors."
         }
         always {
-            echo "📅 Pipeline finished at: ${new Date()}"
+            echo "Pipeline finished at: ${new Date()}"
         }
     }
 }
