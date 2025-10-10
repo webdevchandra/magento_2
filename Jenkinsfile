@@ -82,7 +82,8 @@ pipeline {
                             tar xzf ${TAR_NAME}
                             echo "Removing tarball..."
                             rm ${TAR_NAME}
-                        
+                            composer install
+                            
                         """
 
                             echo "Executing remote extraction commands..."
