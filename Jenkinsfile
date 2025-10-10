@@ -113,28 +113,27 @@ pipeline {
                     def magentoCommands = """
                         set -e
                         cd ${REMOTE_PATH}
-
-                        # 1. Enable Maintenance Mode to prevent users accessing the site during update
+                    
+                        # 1. Compile code before enabling maintenance mode
+                        echo "Compiling Magento code..."
+                        php bin/magento setup:di:compile
+                    
+                        # 2. Enable Maintenance Mode
                         echo "Enabling Magento maintenance mode..."
                         php bin/magento maintenance:enable
-
-                        # Composer install is skipped here as it ran in the previous stage.
-
-                        # 2. Clear cache, run database migrations, and compile code
-                        echo "Running setup:upgrade and compiling code..."
+                    
+                        # 3. Run DB upgrade and deploy static content
+                        echo "Running setup:upgrade..."
                         php bin/magento setup:upgrade --keep-generated
-                        php bin/magento setup:di:compile
-
-                        # 3. Deploy static content (Change 'en_US' to your required locale(s))
+                    
                         echo "Deploying static content..."
                         php bin/magento setup:static-content:deploy en_US -f
-
-                        # 4. Clear cache and Disable Maintenance Mode
+                    
+                        # 4. Clear cache and disable maintenance mode
                         echo "Flushing cache and disabling maintenance mode..."
                         php bin/magento cache:flush
                         php bin/magento maintenance:disable
                     """
-                    
                     echo "Executing remote Magento CLI commands..."
                     // Run all commands in a single ssh session for efficiency
                     sshCommand remote: remote, command: magentoCommands, failOnError: true
