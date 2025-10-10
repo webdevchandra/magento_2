@@ -5,7 +5,7 @@ pipeline {
         // --- Connection Details ---
         ARTIFACT_DIR = 'build_artifact'
         TAR_NAME     = 'magento-clean.tar.gz'
-        REMOTE_USER  = 'root'
+        REMOTE_USER  = 'cm'
         REMOTE_IP    = '172.18.147.53' // Your target IP
         REMOTE_PATH  = '/var/www/html/magento2'
         
