@@ -99,17 +99,15 @@ pipeline {
         }
 
         // Re-adding the Magento deployment commands needed for a complete pipeline
-       stage('Magento Deployment Commands') {
+         stage('Magento Deployment Commands') {
     steps {
         sh '''#!/bin/bash
             set -e
             echo "Starting Magento deployment tasks..."
-            echo "Setting permissions..."
-            echo "$SUDO_PASSWORD" | sudo -S chown -R cm:www-data .
-            echo "$SUDO_PASSWORD" | sudo -S find . -type d -exec chmod 750 {} \\;
-            echo "$SUDO_PASSWORD" | sudo -S find . -type f -exec chmod 640 {} \\;
-            echo "$SUDO_PASSWORD" | sudo -S chmod -R 770 var pub/static pub/media generated
+
             cd /var/www/html/magento2
+
+            echo "Setting permissions..."
             sudo chown -R cm:www-data .
             sudo find . -type d -exec chmod 750 {} \\;
             sudo find . -type f -exec chmod 640 {} \\;
@@ -142,6 +140,7 @@ pipeline {
         '''
     }
 }
+
     }
 
     post {
