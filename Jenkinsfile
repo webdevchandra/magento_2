@@ -84,10 +84,14 @@ pipeline {
 
                                 # Run composer install to fetch dependencies (ADDED)
                                 echo "Running composer install to fetch dependencies..."
-                                composer install --no-dev --optimize-autoloader
+                                composer install --ignore-paltform-reqs
+                                echo "Running dumpautolaod..."
                                 composer dump-autoload
+                                echo "Running sudo permissions ..."
                                 echo "test@123" | sudo -S chown -R cm:cm .
+                                echo "Running chmod permissions..."
                                 chmod -R 777 generated/ pub/ var/cache/ var/page_cache/
+                                echo "end permissions..."
                             """
                             echo "Executing remote extraction commands..."
                             // Use sshCommand to run the script remotely
