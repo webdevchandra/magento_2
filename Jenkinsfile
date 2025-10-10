@@ -108,7 +108,7 @@ stage('Magento Deployment Commands') {
             mkdir -p vendor var pub/static pub/media generated
 
             echo "Setting initial permissions before Composer install..."
-            echo "test@123" | sudo -S chown -R cm:cm .
+            echo "test@123" | sudo -S chown -R root:root .
             echo "test@123" | sudo -S chmod -R 775 .
 
             echo "Running composer install to fetch dependencies..."
