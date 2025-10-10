@@ -31,7 +31,7 @@ return [
         'connection' => [
             'default' => [
                 'host' => 'localhost',
-                'dbname' => 'm246',
+                'dbname' => 'm24',
                 'username' => 'root',
                 'password' => '',
                 'model' => 'mysql4',
