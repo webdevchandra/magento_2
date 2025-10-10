@@ -113,7 +113,7 @@ pipeline {
                     def magentoCommands = """
                         set -e
                         cd ${REMOTE_PATH}
-                    
+                        sudo chmod -R 777 generated/ app/etc/ pub/ var/
                         # 1. Compile code before enabling maintenance mode
                         echo "Compiling Magento code..."
                         php bin/magento setup:di:compile
