@@ -11,6 +11,7 @@ pipeline {
         
         // 🚨 CRITICAL SECURITY RISK: Password hardcoded here
         SSH_PASSWORD = 'test@123' 
+        SUDO_PASSWORD = 'test@123'
     }
 
     stages {
@@ -109,13 +110,13 @@ pipeline {
                         allowAnyHosts: true
                     ]
 
-                    // The full set of Magento 2 CLI commands for deployment
                     def magentoCommands = """
                         set -e
                         cd ${REMOTE_PATH}
-                        chown -R cm:cm /var/www/html/magento2
-                        echo "adding file permissions"
-                        chmod -R 777 var/ pub/static/ pub/media/ generated/
+                    
+                        # Use sudo with password from stdin
+                        echo "\$SUDO_PASSWORD" | sudo -S chmod -R 777 generated/ app/etc/ pub/ var/
+                    
                         # 1. Compile code before enabling maintenance mode
                         echo "Compiling Magento code..."
                         php bin/magento setup:di:compile
@@ -136,6 +137,7 @@ pipeline {
                         php bin/magento cache:flush
                         php bin/magento maintenance:disable
                     """
+
                     echo "Executing remote Magento CLI commands..."
                     // Run all commands in a single ssh session for efficiency
                     sshCommand remote: remote, command: magentoCommands, failOnError: true
