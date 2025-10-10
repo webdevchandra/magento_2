@@ -104,25 +104,11 @@ pipeline {
         sh '''#!/bin/bash
             set -e
             cd /var/www/html/magento2
-
-            # Hardcoded sudo password
-            SUDO_PASS='test@123'
-
-            echo "$SUDO_PASS" | sudo -S chown -R cm:www-data .
-            echo "$SUDO_PASS" | sudo -S find . -type d -exec chmod 750 {} \\;
-            echo "$SUDO_PASS" | sudo -S find . -type f -exec chmod 640 {} \\;
-            echo "$SUDO_PASS" | sudo -S chmod -R 770 var pub/static pub/media generated
-
-            rm -rf var/cache/* var/page_cache/* var/view_preprocessed/*
-            rm -rf generated/code/* generated/metadata/*
-
-            composer install --no-dev --optimize-autoloader
-            php bin/magento setup:di:compile
             php bin/magento maintenance:enable
-            php bin/magento setup:upgrade --keep-generated
+            php bin/magento setup:upgrade
+            php bin/magento setup:di:compile
             php bin/magento setup:static-content:deploy en_US -f
             php bin/magento cache:flush
-            php bin/magento maintenance:disable
         '''
     }
 }
