@@ -50,7 +50,7 @@ pipeline {
         }
 
         // ---------------------------------------------------------------------
-        // FIX: Using SSH Pipeline Steps
+        // FIX: Using SUDO for extraction and CHOWN to fix permissions
         // ---------------------------------------------------------------------
         stage('Upload and Extract') {
             steps {
@@ -63,68 +63,92 @@ pipeline {
                         host: REMOTE_IP,
                         user: REMOTE_USER,
                         password: SSH_PASSWORD,
-                        allowAnyHosts: true // Equivalent to -o StrictHostKeyChecking=no
+                        allowAnyHosts: true 
                     ]
                     
                     try {
-                        timeout(time: 10, unit: 'MINUTES') { // INCREASED TIMEOUT to 10 minutes to accommodate composer install
+                        timeout(time: 10, unit: 'MINUTES') { 
                             
                             // 2. Upload the tarball using sshPut
                             echo "Uploading ${TAR_NAME} to ${REMOTE_PATH}..."
                             sshPut remote: remote, from: TAR_NAME, into: REMOTE_PATH, failOnError: true
 
-                            // 3. Execute the extraction command using sshCommand
+                            // 3. Execute the extraction, ownership fix, and composer install using sshCommand
                             def remoteCommand = """
                             set -e
                             cd ${REMOTE_PATH}
                         
-                            echo "Extracting artifact..."
-                            tar xzf ${TAR_NAME}
+                            echo "Extracting artifact with sudo..."
+                            # Use sudo to allow tar to change file metadata (utime/mode) in the web root.
+                            # We use 'sh -c' to ensure proper command grouping and execution via sudo.
+                            # NOTE: This requires 'cm' user to have passwordless sudo or a system to handle the password.
+                            # If password is required, you may need the 'expect' plugin.
+                            sudo tar xzf ${TAR_NAME}
+                            
+                            echo "Setting ownership of all extracted files to ${REMOTE_USER}..."
+                            # Set ownership back to the deployment user to allow composer/magento commands to run without sudo.
+                            sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
+                            
                             echo "Removing tarball..."
                             rm ${TAR_NAME}
-                            composer install
                             
-                        """
+                            echo "Running composer install..."
+                            composer install --no-dev --prefer-dist --optimize-autoloader
+                            """
 
-                            echo "Executing remote extraction commands..."
-                            // Use sshCommand to run the script remotely
+                            echo "Executing remote extraction and setup commands..."
                             sshCommand remote: remote, command: remoteCommand, failOnError: true
                         }
                     } catch (err) {
-                        // The error message will now be cleaner if the connection fails
                         error "Deployment failed: Check network connection, plugin installation, or credentials: ${err}"
                     }
                 }
             }
         }
 
-        // Re-adding the Magento deployment commands needed for a complete pipeline
-stage('Magento Deployment Commands') {
-    steps {
-        sh '''#!/bin/bash
-            set -e
-            cd /var/www/html/magento2
+        // ---------------------------------------------------------------------
+        // NEW REMOTE STAGE: This executes all Magento CLI commands on the remote server
+        // ---------------------------------------------------------------------
+        stage('Magento Deployment Commands (Remote)') {
+            steps {
+                script {
+                    def remote = [
+                        name: 'magento_server',
+                        host: REMOTE_IP,
+                        user: REMOTE_USER,
+                        password: SSH_PASSWORD,
+                        allowAnyHosts: true 
+                    ]
 
-            echo "Running Magento setup upgrade..."
-            php bin/magento setup:upgrade
+                    // Note: These commands often require running as the web server user (e.g., www-data) 
+                    // or with appropriate sudo permissions. We run them here as 'cm' because ownership was fixed above.
+                    def magentoCommand = """
+                    set -e
+                    cd ${REMOTE_PATH}
+                    
+                    echo "Running Magento setup upgrade..."
+                    php bin/magento setup:upgrade --keep-generated
 
-            echo "Compiling Magento..."
-            php bin/magento setup:di:compile
+                    echo "Compiling Magento..."
+                    php bin/magento setup:di:compile
 
-            echo "Deploying static content..."
-            php bin/magento setup:static-content:deploy en_US -f
+                    echo "Deploying static content..."
+                    php bin/magento setup:static-content:deploy en_US -f
 
-            echo "Flushing cache..."
-            php bin/magento cache:flush
-
-            echo "✅ Magento deployment done."
-        '''
-    }
-}
-
-
-
-
+                    echo "Flushing cache..."
+                    php bin/magento cache:flush
+                    
+                    # FINAL OWNERSHIP FIX: In a production setup, you would typically use chown here 
+                    # to set the ownership to the correct web server user (e.g., www-data).
+                    # Example: sudo chown -R www-data:www-data ${REMOTE_PATH}
+                    
+                    echo "✅ Magento deployment done."
+                    """
+                    echo "Executing Magento deployment commands remotely..."
+                    sshCommand remote: remote, command: magentoCommand, failOnError: true
+                }
+            }
+        }
     }
 
     post {
