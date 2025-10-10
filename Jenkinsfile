@@ -103,11 +103,6 @@ stage('Magento Deployment Commands') {
         sh '''#!/bin/bash
             set -e
             cd /var/www/html/magento2
-            echo "Fixing ownership to jenkins..."
-            
-            echo "Setting write permissions..."
-            chmod -R 775 var pub generated
-            chmod -R 777 var/cache var/page_cache
 
             echo "Running composer install..."
             composer install --ignore-platform-reqs
