@@ -118,8 +118,8 @@ pipeline {
                         # Set user:group to cm:www-data
                         sudo chown -R cm:www-data .
                         # Set directory and file permissions
-                        find . -type d -exec chmod 750 {} \;
-                        find . -type f -exec chmod 640 {} \;
+                        find . -type d -exec chmod 750 {} \\;
+                        find . -type f -exec chmod 640 {} \\;
                         # Set writable permissions for required directories
                         chmod -R 770 var pub/static pub/media generated
                         # 1. Compile code before enabling maintenance mode
