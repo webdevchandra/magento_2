@@ -103,37 +103,40 @@ stage('Magento Deployment Commands') {
         sh '''#!/bin/bash
             set -e
             cd /var/www/html/magento2
-            echo "Setting initial permissions before Composer install..."
-            echo "test@123" | sudo -S chown -R root:root .
-            echo "test@123" | sudo -S chmod -R 775 .
-            
-            echo "Creating missing directories..."
+
+            echo "Creating required directories..."
             mkdir -p vendor var pub/static pub/media generated
 
-            
+            echo "Fixing ownership to jenkins..."
+            chown -R jenkins:jenkins .
 
-            echo "Running composer install to fetch dependencies..."
+            echo "Setting write permissions..."
+            chmod -R 775 var pub generated
+            chmod -R 777 var/cache var/page_cache
+
+            echo "Running composer install..."
             composer install --ignore-platform-reqs
 
-            echo "Running dump-autoload..."
+            echo "Running composer dump-autoload..."
             composer dump-autoload
 
-            echo "Resetting permissions after install..."
-            echo "test@123" | sudo -S chown -R root:root .
+            echo "Running Magento setup upgrade..."
+            php bin/magento setup:upgrade
 
-            echo "Applying write permissions for Magento..."
-            echo "test@123" | sudo -S chmod -R 777 generated/ pub/ var/cache/ var/page_cache/
+            echo "Compiling Magento..."
+            php bin/magento setup:di:compile
 
-            echo "Running Magento setup commands..."
-            echo "test@123" | sudo -S php bin/magento setup:upgrade
-            echo "test@123" | sudo -S php bin/magento setup:di:compile
-            echo "test@123" | sudo -S php bin/magento setup:static-content:deploy en_US -f
-            echo "test@123" | sudo -S php bin/magento cache:flush
+            echo "Deploying static content..."
+            php bin/magento setup:static-content:deploy en_US -f
 
-            echo "Magento deployment commands completed successfully."
+            echo "Flushing cache..."
+            php bin/magento cache:flush
+
+            echo "✅ Magento deployment done."
         '''
     }
 }
+
 
 
 
