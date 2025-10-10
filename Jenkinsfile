@@ -99,44 +99,47 @@ pipeline {
         }
 
         // Re-adding the Magento deployment commands needed for a complete pipeline
-        stage('Magento Deployment Commands') {
-            steps {
-                echo 'custom code started'
-                cd /var/www/html/magento2
-                
-                echo "Setting permissions..."
-                sh sudo chown -R cm:www-data .
-                sh sudo find . -type d -exec chmod 750 {} \\;
-                sh sudo find . -type f -exec chmod 640 {} \\;
-                sh sudo chmod -R 770 var pub/static pub/media generated
-                
-                echo "Cleaning old cache and generated files..."
-                sh rm -rf var/cache/* var/page_cache/* var/view_preprocessed/*
-                sh rm -rf generated/code/* generated/metadata/*
-                
-                echo "Running composer install..."
-                sh composer install --no-dev --optimize-autoloader
-                
-                echo "Compiling Magento code..."
-                sh php bin/magento setup:di:compile
-                
-                echo "Enabling maintenance mode..."
-                sh php bin/magento maintenance:enable
-                
-                echo "Running setup:upgrade..."
-                sh php bin/magento setup:upgrade --keep-generated
-                
-                 echo "Deploying static content..."
-                sh php bin/magento setup:static-content:deploy en_US -f
-                
-                echo "Flushing cache..."
-                sh php bin/magento cache:flush
-                
-                echo "Disabling maintenance mode..."
-                sh php bin/magento maintenance:disable
-               
-            }
-        }
+       stage('Magento Deployment Commands') {
+    steps {
+        sh '''#!/bin/bash
+            set -e
+            echo "Starting Magento deployment tasks..."
+
+            cd /var/www/html/magento2
+
+            echo "Setting permissions..."
+            sudo chown -R cm:www-data .
+            sudo find . -type d -exec chmod 750 {} \\;
+            sudo find . -type f -exec chmod 640 {} \\;
+            sudo chmod -R 770 var pub/static pub/media generated
+
+            echo "Cleaning old cache and generated files..."
+            rm -rf var/cache/* var/page_cache/* var/view_preprocessed/*
+            rm -rf generated/code/* generated/metadata/*
+
+            echo "Running composer install..."
+            composer install --no-dev --optimize-autoloader
+
+            echo "Compiling Magento code..."
+            php bin/magento setup:di:compile
+
+            echo "Enabling maintenance mode..."
+            php bin/magento maintenance:enable
+
+            echo "Running setup:upgrade..."
+            php bin/magento setup:upgrade --keep-generated
+
+            echo "Deploying static content..."
+            php bin/magento setup:static-content:deploy en_US -f
+
+            echo "Flushing cache..."
+            php bin/magento cache:flush
+
+            echo "Disabling maintenance mode..."
+            php bin/magento maintenance:disable
+        '''
+    }
+}
     }
 
     post {
