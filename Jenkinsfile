@@ -103,12 +103,7 @@ stage('Magento Deployment Commands') {
         sh '''#!/bin/bash
             set -e
             cd /var/www/html/magento2
-
-            echo "Creating required directories..."
-            mkdir -p vendor var pub/static pub/media generated
-
             echo "Fixing ownership to jenkins..."
-            echo "test@123" | sudo -S chown -R jenkins:jenkins .
 
             echo "Setting write permissions..."
             echo "test@123" | sudo -S chmod -R 775 var pub generated
@@ -121,16 +116,16 @@ stage('Magento Deployment Commands') {
             composer dump-autoload
 
             echo "Running Magento setup upgrade..."
-            php bin/magento setup:upgrade
+            echo "test@123" | sudo -S php bin/magento setup:upgrade
 
             echo "Compiling Magento..."
-            php bin/magento setup:di:compile
+            echo "test@123" | sudo -S php bin/magento setup:di:compile
 
             echo "Deploying static content..."
-            php bin/magento setup:static-content:deploy en_US -f
+            echo "test@123" | sudo -S php bin/magento setup:static-content:deploy en_US -f
 
             echo "Flushing cache..."
-            php bin/magento cache:flush
+            echo "test@123" | sudo -S php bin/magento cache:flush
 
             echo "✅ Magento deployment done."
         '''
