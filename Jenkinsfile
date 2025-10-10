@@ -86,6 +86,7 @@ pipeline {
                                 echo "Running composer install to fetch dependencies..."
                                 composer install --no-dev --optimize-autoloader
                                 composer dump-autoload
+                                echo "test@123" | sudo -S chown -R cm:cm .
                                 chmod -R 777 generated/ pub/ var/cache/ var/page_cache/
                             """
                             echo "Executing remote extraction commands..."
