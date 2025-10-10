@@ -104,7 +104,7 @@ pipeline {
             set -e
             cd /var/www/html/magento2
             echo "Running composer install to fetch dependencies..."
-            composer install --ignore-platform-reqs
+            composer install
             echo "Running dump-autoload..."
             composer dump-autoload
         
