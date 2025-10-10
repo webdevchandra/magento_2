@@ -136,10 +136,10 @@ pipeline {
                     sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
 
                     echo "Running Magento setup upgrade..."
-                    php bin/magento setup:upgrade --keep-generated
+                    #php bin/magento setup:upgrade --keep-generated
 
                     echo "Compiling Magento (Dependency Injection)..."
-                    #php bin/magento setup:di:compile
+                    php bin/magento setup:di:compile
 
                     echo "Deploying static content..."
                     php bin/magento setup:static-content:deploy en_US -f
