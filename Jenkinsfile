@@ -115,8 +115,6 @@ pipeline {
                         cd ${REMOTE_PATH}
                         chown -R cm:cm /var/www/html/magento2
                         echo "adding file permissions"
-                        find /var/www/html/magento2 -type d -exec chmod 755 {} \;
-                        find /var/www/html/magento2 -type f -exec chmod 644 {} \;
                         chmod -R 777 var/ pub/static/ pub/media/ generated/
                         # 1. Compile code before enabling maintenance mode
                         echo "Compiling Magento code..."
