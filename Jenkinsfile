@@ -106,8 +106,8 @@ stage('Magento Deployment Commands') {
             echo "Fixing ownership to jenkins..."
             
             echo "Setting write permissions..."
-            echo "test@123" | sudo -S chmod -R 775 var pub generated
-            echo "test@123" | sudo -S chmod -R 777 var/cache var/page_cache
+            chmod -R 775 var pub generated
+            chmod -R 777 var/cache var/page_cache
 
             echo "Running composer install..."
             composer install --ignore-platform-reqs
@@ -116,16 +116,16 @@ stage('Magento Deployment Commands') {
             composer dump-autoload
 
             echo "Running Magento setup upgrade..."
-            echo "test@123" | sudo -S php bin/magento setup:upgrade
+            php bin/magento setup:upgrade
 
             echo "Compiling Magento..."
-            echo "test@123" | sudo -S php bin/magento setup:di:compile
+            php bin/magento setup:di:compile
 
             echo "Deploying static content..."
-            echo "test@123" | sudo -S php bin/magento setup:static-content:deploy en_US -f
+            php bin/magento setup:static-content:deploy en_US -f
 
             echo "Flushing cache..."
-            echo "test@123" | sudo -S php bin/magento cache:flush
+            php bin/magento cache:flush
 
             echo "✅ Magento deployment done."
         '''
