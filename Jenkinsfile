@@ -29,7 +29,7 @@ pipeline {
                     def excludes = [
                         '.git/', 
                         'pub/media/', 'node_modules/', 'dev/', 'phpserver/', 
-                        '.idea/', '*.log', 'setup/', 'vendor/','app/', 'lib','var/'
+                        '.idea/', '*.log', 'setup/'
                     ]
                     def excludeParams = excludes.collect { "--exclude='${it}'" }.join(' ')
 
@@ -93,7 +93,7 @@ pipeline {
                             rm ${TAR_NAME}
                             
                             echo "Running composer install..."
-                            #composer install --no-dev --prefer-dist --optimize-autoloader
+                            composer install --no-dev --prefer-dist --optimize-autoloader
                             """
 
                             echo "Executing remote extraction and setup commands..."
@@ -124,21 +124,23 @@ pipeline {
                     set -e
                     cd ${REMOTE_PATH}
                     
-                    echo "Setting Magento file system permissions using sudo..."
-                    # Since the previous stage's composer install or other environment factors may have created files 
-                    # with restrictive permissions, we use 'sudo' here to guarantee the chmod operations succeed.
-                    #sudo find var generated pub/static pub/media app/etc -type d -exec chmod u+w,g+w {} +
-                    #sudo find var generated pub/static pub/media app/etc -type f -exec chmod u+w,g+w {} +
-                    #sudo chmod u+x bin/magento
+                    echo "Cleaning volatile directories and resetting permissions..."
+                    # CRITICAL FIX: Clear the cache and generated files, which might have restricted permissions.
+                    sudo rm -rf var/cache/* var/page_cache/* generated/*
                     
-                    # Re-apply ownership using sudo to ensure the deployment user ('cm') owns any files 
-                    # created since the previous stage and has full control before running Magento commands.
+                    # 1. Re-apply ownership using sudo to ensure the deployment user ('cm') owns all files.
                     sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
 
+                    # 2. Set directory and file permissions using sudo for guaranteed success.
+                    sudo find var generated pub/static pub/media app/etc -type d -exec chmod u+w,g+w {} +
+                    sudo find var generated pub/static pub/media app/etc -type f -exec chmod u+w,g+w {} +
+                    sudo chmod u+x bin/magento
+
                     echo "Running Magento setup upgrade..."
-                    #php bin/magento setup:upgrade --keep-generated
-                    composer dump-autoload
+                    php bin/magento setup:upgrade --keep-generated
+
                     echo "Compiling Magento (Dependency Injection)..."
+                    # This step requires write access to the 'generated' directory, which should now be fixed.
                     php bin/magento setup:di:compile
 
                     echo "Deploying static content..."
