@@ -137,11 +137,11 @@ pipeline {
                     sudo chmod u+x bin/magento
 
                     echo "Running Magento setup upgrade..."
-                    php bin/magento setup:upgrade --keep-generated
+                    #php bin/magento setup:upgrade --keep-generated
 
                     echo "Compiling Magento (Dependency Injection)..."
                     # This step requires write access to the 'generated' directory, which should now be fixed.
-                    php bin/magento setup:di:compile
+                     php bin/magento setup:di:compile 
 
                     echo "Deploying static content..."
                     php bin/magento setup:static-content:deploy en_US -f
