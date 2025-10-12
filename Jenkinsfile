@@ -138,7 +138,7 @@ pipeline {
 
                     echo "Running Magento setup upgrade..."
                     #php bin/magento setup:upgrade --keep-generated
-
+                    composer dump-autoload
                     echo "Compiling Magento (Dependency Injection)..."
                     # This step requires write access to the 'generated' directory, which should now be fixed.
                      php bin/magento setup:di:compile 
