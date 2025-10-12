@@ -138,8 +138,7 @@ pipeline {
 
                     echo "Running Magento setup upgrade..."
                     composer dump-autoload
-                    sudo chown -R cm:cm ${REMOTE_PATH}
-                    sudo chmod -R 777 .
+                    sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
                     echo "Compiling Magento (Dependency Injection)..."
                     # This step requires write access to the 'generated' directory, which should now be fixed.
                     php bin/magento setup:di:compile 
