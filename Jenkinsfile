@@ -137,22 +137,24 @@ pipeline {
                     sudo chmod u+x bin/magento
 
                     echo "Running Magento setup upgrade..."
-                    #php bin/magento setup:upgrade --keep-generated
                     composer dump-autoload
+                    sudo chown -R cm:cm ${REMOTE_PATH}
+                    sudo chmod -R 777 .
                     echo "Compiling Magento (Dependency Injection)..."
                     # This step requires write access to the 'generated' directory, which should now be fixed.
-                     php bin/magento setup:di:compile 
-
+                    php bin/magento setup:di:compile 
+                    echo "Running setup upgarde"
+                    php bin/magento setup:upgrade --keep-generated
                     echo "Deploying static content..."
+                    
                     php bin/magento setup:static-content:deploy en_US -f
-
                     echo "Flushing cache..."
                     php bin/magento cache:flush
                     
                     # FINAL OWNERSHIP FIX: In a production setup, you would typically use chown here 
                     # to set the ownership to the correct web server user (e.g., www-data).
                     # Example: sudo chown -R www-data:www-data ${REMOTE_PATH}
-                    
+                  
                     echo "✅ Magento deployment done."
                     """
                     echo "Executing Magento deployment commands remotely..."
