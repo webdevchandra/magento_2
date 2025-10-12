@@ -126,7 +126,6 @@ pipeline {
                     
                     echo "Cleaning volatile directories and resetting permissions..."
                     # CRITICAL FIX: Clear the cache and generated files, which might have restricted permissions.
-                    sudo rm -rf var/cache/* var/page_cache/* generated/*
                     
                     # 1. Re-apply ownership using sudo to ensure the deployment user ('cm') owns all files.
                     sudo chown -R ${REMOTE_USER}:${REMOTE_USER} .
@@ -142,10 +141,10 @@ pipeline {
                     echo "Compiling Magento (Dependency Injection)..."
                     # This step requires write access to the 'generated' directory, which should now be fixed.
                     php bin/magento setup:di:compile 
+                    sudo chown -R ${REMOTE_USER}:${REMOTE_USER} /var/www/html/magento2/var/cache
                     echo "Running setup upgarde"
                     php bin/magento setup:upgrade --keep-generated
                     echo "Deploying static content..."
-                    
                     php bin/magento setup:static-content:deploy en_US -f
                     echo "Flushing cache..."
                     php bin/magento cache:flush
